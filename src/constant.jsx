@@ -177,8 +177,8 @@ export const initialPieceState = [
   {
     image: `assets/white-knight.png`,
     position: {
-      x: 1,
-      y: 0,
+      x: 3,
+      y: 3,
     },
     type: "KNIGHT",
     team: 1,
