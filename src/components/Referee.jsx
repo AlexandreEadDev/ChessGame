@@ -123,6 +123,101 @@ export default class Referee {
           }
         }
       }
+    } else if (type === "BISHOP") {
+      //MOVEMENT AND ATTACK LOGIC
+      for (let i = 1; i < 8; i++) {
+        //Up Right Move
+        if (
+          nextPosition.x > prevPosition.x &&
+          nextPosition.y > prevPosition.y
+        ) {
+          let passedTiles = { x: prevPosition.x + i, y: prevPosition.y + i };
+          if (
+            passedTiles.x === nextPosition.x &&
+            passedTiles.y === nextPosition.y
+          ) {
+            if (
+              !this.tileIsOccupied(passedTiles, boardState) ||
+              this.tileIsOccupiedByOppo(passedTiles, boardState, team)
+            ) {
+              return true;
+            }
+          } else {
+            if (this.tileIsOccupied(passedTiles, boardState)) {
+              break;
+            }
+          }
+        }
+
+        //Bottom Right Move
+        if (
+          nextPosition.x > prevPosition.x &&
+          nextPosition.y < prevPosition.y
+        ) {
+          let passedTiles = { x: prevPosition.x + i, y: prevPosition.y + -i };
+          if (
+            passedTiles.x === nextPosition.x &&
+            passedTiles.y === nextPosition.y
+          ) {
+            if (
+              !this.tileIsOccupied(passedTiles, boardState) ||
+              this.tileIsOccupiedByOppo(passedTiles, boardState, team)
+            ) {
+              return true;
+            }
+          } else {
+            if (this.tileIsOccupied(passedTiles, boardState)) {
+              break;
+            }
+          }
+        }
+
+        //Bottom Left Move
+        if (
+          nextPosition.x < prevPosition.x &&
+          nextPosition.y < prevPosition.y
+        ) {
+          let passedTiles = { x: prevPosition.x - i, y: prevPosition.y - i };
+          if (
+            passedTiles.x === nextPosition.x &&
+            passedTiles.y === nextPosition.y
+          ) {
+            if (
+              !this.tileIsOccupied(passedTiles, boardState) ||
+              this.tileIsOccupiedByOppo(passedTiles, boardState, team)
+            ) {
+              return true;
+            }
+          } else {
+            if (this.tileIsOccupied(passedTiles, boardState)) {
+              break;
+            }
+          }
+        }
+
+        //Top Left Move
+        if (
+          nextPosition.x < prevPosition.x &&
+          nextPosition.y > prevPosition.y
+        ) {
+          let passedTiles = { x: prevPosition.x - i, y: prevPosition.y + i };
+          if (
+            passedTiles.x === nextPosition.x &&
+            passedTiles.y === nextPosition.y
+          ) {
+            if (
+              !this.tileIsOccupied(passedTiles, boardState) ||
+              this.tileIsOccupiedByOppo(passedTiles, boardState, team)
+            ) {
+              return true;
+            }
+          } else {
+            if (this.tileIsOccupied(passedTiles, boardState)) {
+              break;
+            }
+          }
+        }
+      }
     }
 
     return false;
