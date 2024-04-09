@@ -167,8 +167,8 @@ export const initialPieceState = [
   {
     image: `assets/white-rook.png`,
     position: {
-      x: 0,
-      y: 0,
+      x: 3,
+      y: 3,
     },
     type: "ROOK",
     team: 1,
@@ -177,8 +177,8 @@ export const initialPieceState = [
   {
     image: `assets/white-knight.png`,
     position: {
-      x: 3,
-      y: 3,
+      x: 1,
+      y: 0,
     },
     type: "KNIGHT",
     team: 1,
