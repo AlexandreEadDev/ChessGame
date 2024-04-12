@@ -11,7 +11,6 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-knight.png`,
@@ -21,7 +20,6 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-bishop.png`,
@@ -31,7 +29,6 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-queen.png`,
@@ -41,7 +38,6 @@ export const initialPieceState = [
     },
     type: "QUEEN",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-king.png`,
@@ -51,7 +47,6 @@ export const initialPieceState = [
     },
     type: "KING",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-bishop.png`,
@@ -61,7 +56,6 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-knight.png`,
@@ -71,7 +65,6 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-rook.png`,
@@ -81,7 +74,6 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 0,
-    enPassant: false,
   },
   {
     image: `assets/black-pawn.png`,
@@ -172,7 +164,6 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-knight.png`,
@@ -182,7 +173,6 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-bishop.png`,
@@ -192,7 +182,6 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-queen.png`,
@@ -202,17 +191,15 @@ export const initialPieceState = [
     },
     type: "QUEEN",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-king.png`,
     position: {
       x: 4,
-      y: 0,
+      y: 3,
     },
     type: "KING",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-bishop.png`,
@@ -222,7 +209,6 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-knight.png`,
@@ -232,7 +218,6 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-rook.png`,
@@ -242,7 +227,6 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 1,
-    enPassant: false,
   },
   {
     image: `assets/white-pawn.png`,

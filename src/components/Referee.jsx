@@ -50,6 +50,7 @@ export default class Referee {
     return false;
   }
 
+  // Pieces Rules
   pawnMove(prevPosition, nextPosition, team, boardState) {
     const teamRow = team === 1 ? 1 : 6;
     const pawnDirection = team === 1 ? 1 : -1;
@@ -127,158 +128,138 @@ export default class Referee {
     }
   }
   bishopMove(prevPosition, nextPosition, team, boardState) {
-    //MOVEMENT AND ATTACK LOGIC
-    for (let i = 1; i < 8; i++) {
-      //Diagonal
-      let multiplierX = nextPosition.x < prevPosition.x ? -1 : 1;
-      let multiplierY = nextPosition.y < prevPosition.y ? -1 : 1;
-      let passedTiles = {
-        x: prevPosition.x + i * multiplierX,
-        y: prevPosition.y + i * multiplierY,
-      };
-      if (
-        passedTiles.x === nextPosition.x &&
-        passedTiles.y === nextPosition.y
-      ) {
-        if (
-          !this.tileIsOccupied(passedTiles, boardState) ||
-          this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-        ) {
-          return true;
+    // Check for diagonal movement
+    const isDiagonalMove =
+      Math.abs(prevPosition.x - nextPosition.x) ===
+      Math.abs(prevPosition.y - nextPosition.y);
+    if (isDiagonalMove) {
+      const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
+      const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
+      let posX = prevPosition.x + directionX;
+      let posY = prevPosition.y + directionY;
+      while (posX !== nextPosition.x && posY !== nextPosition.y) {
+        if (this.tileIsOccupied({ x: posX, y: posY }, boardState)) {
+          return false; // Invalid move if the path is blocked
         }
-      } else {
-        if (this.tileIsOccupied(passedTiles, boardState)) {
-          break;
-        }
+        posX += directionX;
+        posY += directionY;
       }
+      // No obstacles encountered, and the destination is valid
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
     }
+    return false;
   }
   rookMove(prevPosition, nextPosition, team, boardState) {
+    // Check for vertical movement
     if (prevPosition.x === nextPosition.x) {
-      for (let i = 1; i < 8; i++) {
-        let multiplier = nextPosition.y < prevPosition.y ? -1 : 1;
-        let passedTiles = {
-          x: prevPosition.x,
-          y: prevPosition.y + i * multiplier,
-        };
-        if (
-          passedTiles.x === nextPosition.x &&
-          passedTiles.y === nextPosition.y
-        ) {
-          if (
-            !this.tileIsOccupied(passedTiles, boardState) ||
-            this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-          ) {
-            return true;
-          }
-        } else {
-          if (this.tileIsOccupied(passedTiles, boardState)) {
-            break;
-          }
+      const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
+      let posY = prevPosition.y + directionY;
+      while (posY !== nextPosition.y) {
+        if (this.tileIsOccupied({ x: prevPosition.x, y: posY }, boardState)) {
+          return false; // Invalid move if the path is blocked
         }
+        posY += directionY;
       }
+      // No obstacles encountered, and the destination is valid
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
     }
 
+    // Check for horizontal movement
     if (prevPosition.y === nextPosition.y) {
-      for (let i = 1; i < 8; i++) {
-        let multiplier = nextPosition.x < prevPosition.x ? -1 : 1;
-        let passedTiles = {
-          x: prevPosition.x + i * multiplier,
-          y: prevPosition.y,
-        };
-        if (
-          passedTiles.x === nextPosition.x &&
-          passedTiles.y === nextPosition.y
-        ) {
-          if (
-            !this.tileIsOccupied(passedTiles, boardState) ||
-            this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-          ) {
-            return true;
-          }
-        } else {
-          if (this.tileIsOccupied(passedTiles, boardState)) {
-            break;
-          }
+      const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
+      let posX = prevPosition.x + directionX;
+      while (posX !== nextPosition.x) {
+        if (this.tileIsOccupied({ x: posX, y: prevPosition.y }, boardState)) {
+          return false; // Invalid move if the path is blocked
         }
+        posX += directionX;
       }
+      // No obstacles encountered, and the destination is valid
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
     }
+    return false;
   }
   queenMove(prevPosition, nextPosition, team, boardState) {
-    for (let i = 1; i < 8; i++) {
-      //Diagonal
-      let multiplierX = nextPosition.x < prevPosition.x ? -1 : 1;
-      let multiplierY = nextPosition.y < prevPosition.y ? -1 : 1;
-      let passedTiles = {
-        x: prevPosition.x + i * multiplierX,
-        y: prevPosition.y + i * multiplierY,
-      };
-      if (
-        passedTiles.x === nextPosition.x &&
-        passedTiles.y === nextPosition.y
-      ) {
-        if (
-          !this.tileIsOccupied(passedTiles, boardState) ||
-          this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-        ) {
-          return true;
+    // Check for vertical movement
+    if (prevPosition.x === nextPosition.x) {
+      const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
+      let posY = prevPosition.y + directionY;
+      while (posY !== nextPosition.y) {
+        if (this.tileIsOccupied({ x: prevPosition.x, y: posY }, boardState)) {
+          return false;
         }
-      } else {
-        if (this.tileIsOccupied(passedTiles, boardState)) {
-          break;
-        }
+        posY += directionY;
       }
-
-      //Vertical
-      if (prevPosition.x === nextPosition.x) {
-        let multiplier = nextPosition.y < prevPosition.y ? -1 : 1;
-        let passedTiles = {
-          x: prevPosition.x,
-          y: prevPosition.y + i * multiplier,
-        };
-        if (
-          passedTiles.x === nextPosition.x &&
-          passedTiles.y === nextPosition.y
-        ) {
-          if (
-            !this.tileIsOccupied(passedTiles, boardState) ||
-            this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-          ) {
-            return true;
-          }
-        } else {
-          if (this.tileIsOccupied(passedTiles, boardState)) {
-            break;
-          }
-        }
-      }
-
-      //Horizontal
-      if (prevPosition.y === nextPosition.y) {
-        let multiplier = nextPosition.x < prevPosition.x ? -1 : 1;
-        let passedTiles = {
-          x: prevPosition.x + i * multiplier,
-          y: prevPosition.y,
-        };
-        if (
-          passedTiles.x === nextPosition.x &&
-          passedTiles.y === nextPosition.y
-        ) {
-          if (
-            !this.tileIsOccupied(passedTiles, boardState) ||
-            this.tileIsOccupiedByOppo(passedTiles, boardState, team)
-          ) {
-            return true;
-          }
-        } else {
-          if (this.tileIsOccupied(passedTiles, boardState)) {
-            break;
-          }
-        }
-      }
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
     }
+
+    // Check for horizontal movement
+    if (prevPosition.y === nextPosition.y) {
+      const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
+      let posX = prevPosition.x + directionX;
+      while (posX !== nextPosition.x) {
+        if (this.tileIsOccupied({ x: posX, y: prevPosition.y }, boardState)) {
+          return false;
+        }
+        posX += directionX;
+      }
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
+    }
+
+    // Check for diagonal movement
+    const isDiagonalMove =
+      Math.abs(prevPosition.x - nextPosition.x) ===
+      Math.abs(prevPosition.y - nextPosition.y);
+    if (isDiagonalMove) {
+      const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
+      const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
+      let posX = prevPosition.x + directionX;
+      let posY = prevPosition.y + directionY;
+      while (posX !== nextPosition.x && posY !== nextPosition.y) {
+        if (this.tileIsOccupied({ x: posX, y: posY }, boardState)) {
+          return false; // Invalid move if the path is blocked
+        }
+        posX += directionX;
+        posY += directionY;
+      }
+      // No obstacles encountered, and the destination is valid
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
+    }
+
+    // Invalid move if none of the conditions above are met
+    return false;
   }
-  kingMove(prevPosition, nextPosition, team, boardState) {}
+  kingMove(prevPosition, nextPosition, team, boardState) {
+    // Check if the movement is within one tile in any direction
+    const isWithinOneTile =
+      Math.abs(prevPosition.x - nextPosition.x) <= 1 &&
+      Math.abs(prevPosition.y - nextPosition.y) <= 1;
+    if (isWithinOneTile) {
+      return (
+        !this.tileIsOccupied(nextPosition, boardState) ||
+        this.tileIsOccupiedByOppo(nextPosition, boardState, team)
+      );
+    }
+    return false;
+  }
 
   isValidMove(prevPosition, nextPosition, type, team, boardState) {
     let validMove = false;
