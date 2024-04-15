@@ -11,14 +11,21 @@ import {
 function Board() {
   const [pieces, setPieces] = useState(initialPieceState);
   const [grabbedPiece, setGrabbedPiece] = useState(null);
+  const [promotionPawn, setpromotionPawn] = useState();
   const [grabPosition, setGrabPosition] = useState({ x: -1, y: -1 });
+  const [promotionOpen, setPromotionOpen] = useState(false);
   const chessBoardRef = useRef(null);
   const referee = new Referee();
+  let board = [];
 
   function grabPieces(e) {
     const chessBoard = chessBoardRef.current;
     const element = e.target;
-    if (element.classList.contains("chess-piece") && chessBoard) {
+    if (
+      element.classList.contains("chess-piece") &&
+      chessBoard &&
+      promotionOpen === false
+    ) {
       const grabX = Math.floor((e.clientX - chessBoard.offsetLeft) / GRID_SIZE);
       const grabY = Math.abs(
         Math.ceil((e.clientY - chessBoard.offsetTop - 600) / GRID_SIZE)
@@ -121,6 +128,7 @@ function Board() {
             }
             return results;
           }, []);
+
           setPieces(updatedPieces);
         } else if (validMove) {
           const updatedPieces = pieces.reduce((results, piece) => {
@@ -128,10 +136,20 @@ function Board() {
               piece.position.x === grabPosition.x &&
               piece.position.y === grabPosition.y
             ) {
+              // EnPassant System
               piece.enPassant =
                 Math.abs(grabPosition.y - y) === 2 && piece.type === "PAWN";
               piece.position.x = x;
               piece.position.y = y;
+
+              // Promotion System
+              let promotionRow = piece.team === 1 ? 7 : 0;
+              console.log(piece);
+              if (piece.type === "PAWN" && y === promotionRow) {
+                setPromotionOpen(true);
+                setpromotionPawn(piece);
+              }
+
               results.push(piece);
             } else if (!(piece.position.x === x && piece.position.y === y)) {
               results.push(piece);
@@ -151,7 +169,26 @@ function Board() {
     }
   }
 
-  let board = [];
+  function choosePromotion(type) {
+    if (promotionPawn === undefined) {
+      return;
+    }
+    const updatedPieces = pieces.reduce((results, piece) => {
+      if (piece.position === promotionPawn?.position) {
+        piece.type = type;
+        const teamType = piece.team === 1 ? "white" : "black";
+        piece.image = `assets/${teamType}-${type.toLowerCase()}.png`;
+      }
+      results.push(piece);
+      return results;
+    }, []);
+    setPieces(updatedPieces);
+    setPromotionOpen(false);
+  }
+
+  function promotionTeamType() {
+    return promotionPawn?.team === 1 ? "white" : "black";
+  }
 
   for (let j = VERTICAL_AXIS.length - 1; j >= 0; j--) {
     for (let i = 0; i < HORIZONTAL_AXIS.length; i++) {
@@ -161,20 +198,62 @@ function Board() {
       );
       let image = piece ? piece.image : undefined;
 
-      board.push(<Tile key={`${j},${i}`} image={image} number={number} />);
+      board.push(
+        <Tile
+          key={`${j},${i}`}
+          image={image}
+          number={number}
+          promotionOpen={promotionOpen}
+        />
+      );
     }
   }
 
   return (
-    <div
-      onMouseMove={(e) => movePieces(e)}
-      onMouseDown={(e) => grabPieces(e)}
-      onMouseUp={(e) => dropPieces(e)}
-      className=" bg-blue-800 w-[600px] h-[600px] grid grid-cols-8 grid-rows-8"
-      ref={chessBoardRef}
-    >
-      {board}
-    </div>
+    <>
+      {promotionOpen ? (
+        <>
+          <div
+            className={`flex justify-around items-center absolute h-[300px] w-[600px] top-[calc(50%-150px)] left-[calc(50%-300px)] ${
+              promotionTeamType() === "white" ? "bg-black/80" : "bg-white/80"
+            }`}
+          >
+            <img
+              onClick={() => choosePromotion("ROOK")}
+              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              src={`assets/${promotionTeamType()}-rook.png`}
+            />
+            <img
+              onClick={() => choosePromotion("BISHOP")}
+              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              src={`assets/${promotionTeamType()}-bishop.png`}
+            />
+            <img
+              onClick={() => choosePromotion("KNIGHT")}
+              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              src={`assets/${promotionTeamType()}-knight.png`}
+            />
+            <img
+              onClick={() => choosePromotion("QUEEN")}
+              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              src={`assets/${promotionTeamType()}-queen.png`}
+            />
+          </div>
+        </>
+      ) : (
+        <> </>
+      )}
+
+      <div
+        onMouseMove={(e) => movePieces(e)}
+        onMouseDown={(e) => grabPieces(e)}
+        onMouseUp={(e) => dropPieces(e)}
+        className=" bg-blue-800 w-[600px] h-[600px] grid grid-cols-8 grid-rows-8"
+        ref={chessBoardRef}
+      >
+        {board}
+      </div>
+    </>
   );
 }
 
