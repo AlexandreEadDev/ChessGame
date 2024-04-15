@@ -196,7 +196,7 @@ export const initialPieceState = [
     image: `assets/white-king.png`,
     position: {
       x: 4,
-      y: 3,
+      y: 0,
     },
     type: "KING",
     team: 1,
