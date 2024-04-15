@@ -97,7 +97,7 @@ export default class Referee {
     }
     return false;
   }
-  kightMove(prevPosition, nextPosition, team, boardState) {
+  knightMove(prevPosition, nextPosition, team, boardState) {
     // MOVEMENT LOGIC
     for (let i = -1; i < 2; i += 2) {
       for (let j = -1; j < 2; j += 2) {
@@ -268,7 +268,7 @@ export default class Referee {
         validMove = this.pawnMove(prevPosition, nextPosition, team, boardState);
         break;
       case (type = "KNIGHT"):
-        validMove = this.kightMove(
+        validMove = this.knightMove(
           prevPosition,
           nextPosition,
           team,
