@@ -30,3 +30,36 @@ export const knightMove = (prevPosition, nextPosition, team, boardState) => {
     }
   }
 };
+
+export const getPossibleKightMoves = (knight, boardState) => {
+  const possibleMoves = [];
+
+  for (let i = -1; i < 2; i += 2) {
+    for (let j = -1; j < 2; j += 2) {
+      const verticalMove = {
+        x: knight.position.x + j,
+        y: knight.position.y + i * 2,
+      };
+      const horizontalMove = {
+        x: knight.position.x + i * 2,
+        y: knight.position.y + j,
+      };
+
+      if (
+        !tileIsOccupied(verticalMove, boardState) ||
+        tileIsOccupiedByOppo(verticalMove, boardState, knight.team)
+      ) {
+        possibleMoves.push(verticalMove);
+      }
+
+      if (
+        !tileIsOccupied(horizontalMove, boardState) ||
+        tileIsOccupiedByOppo(horizontalMove, boardState, knight.team)
+      ) {
+        possibleMoves.push(horizontalMove);
+      }
+    }
+  }
+
+  return possibleMoves;
+};

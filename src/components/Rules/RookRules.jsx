@@ -36,3 +36,42 @@ export const rookMove = (prevPosition, nextPosition, team, boardState) => {
   }
   return false;
 };
+
+export const getPossibleRookMoves = (rook, boardstate) => {
+  const possibleMoves = [];
+
+  const directions = [
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+  ];
+
+  directions.forEach(({ dx, dy }) => {
+    for (let i = 1; i < 8; i++) {
+      const destination = {
+        x: rook.position.x + dx * i,
+        y: rook.position.y + dy * i,
+      };
+
+      if (
+        destination.x < 0 ||
+        destination.x > 7 ||
+        destination.y < 0 ||
+        destination.y > 7
+      )
+        break;
+
+      if (!tileIsOccupied(destination, boardstate)) {
+        possibleMoves.push(destination);
+      } else if (tileIsOccupiedByOppo(destination, boardstate, rook.team)) {
+        possibleMoves.push(destination);
+        break;
+      } else {
+        break;
+      }
+    }
+  });
+
+  return possibleMoves;
+};

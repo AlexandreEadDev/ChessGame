@@ -25,3 +25,33 @@ export const bishopMove = (prevPosition, nextPosition, team, boardState) => {
   }
   return false;
 };
+
+export const getPossibleBishopMoves = (bishop, boardstate) => {
+  const possibleMoves = [];
+
+  const directions = [
+    { dx: 1, dy: 1 },
+    { dx: 1, dy: -1 },
+    { dx: -1, dy: 1 },
+    { dx: -1, dy: -1 },
+  ];
+
+  directions.forEach(({ dx, dy }) => {
+    for (let i = 1; i < 8; i++) {
+      const destination = {
+        x: bishop.position.x + dx * i,
+        y: bishop.position.y + dy * i,
+      };
+      if (!tileIsOccupied(destination, boardstate)) {
+        possibleMoves.push(destination);
+      } else if (tileIsOccupiedByOppo(destination, boardstate, bishop.team)) {
+        possibleMoves.push(destination);
+        break;
+      } else {
+        break;
+      }
+    }
+  });
+
+  return possibleMoves;
+};

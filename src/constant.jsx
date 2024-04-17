@@ -11,6 +11,7 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-knight.png`,
@@ -20,6 +21,7 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-bishop.png`,
@@ -29,6 +31,7 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-queen.png`,
@@ -38,6 +41,7 @@ export const initialPieceState = [
     },
     type: "QUEEN",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-king.png`,
@@ -47,6 +51,7 @@ export const initialPieceState = [
     },
     type: "KING",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-bishop.png`,
@@ -56,6 +61,7 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-knight.png`,
@@ -65,6 +71,7 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-rook.png`,
@@ -74,6 +81,7 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 0,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -84,6 +92,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -94,6 +103,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -104,6 +114,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -114,6 +125,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -124,6 +136,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -134,6 +147,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -144,6 +158,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/black-pawn.png`,
@@ -154,6 +169,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 0,
     enPassant: false,
+    possibleMoves: [],
   },
 
   {
@@ -164,6 +180,7 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-knight.png`,
@@ -173,6 +190,7 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-bishop.png`,
@@ -182,6 +200,7 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-queen.png`,
@@ -191,6 +210,7 @@ export const initialPieceState = [
     },
     type: "QUEEN",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-king.png`,
@@ -200,6 +220,7 @@ export const initialPieceState = [
     },
     type: "KING",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-bishop.png`,
@@ -209,6 +230,7 @@ export const initialPieceState = [
     },
     type: "BISHOP",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-knight.png`,
@@ -218,6 +240,7 @@ export const initialPieceState = [
     },
     type: "KNIGHT",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-rook.png`,
@@ -227,6 +250,7 @@ export const initialPieceState = [
     },
     type: "ROOK",
     team: 1,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -237,6 +261,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -247,6 +272,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -257,6 +283,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -267,6 +294,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -277,6 +305,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -287,6 +316,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -297,6 +327,7 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
   {
     image: `assets/white-pawn.png`,
@@ -307,5 +338,6 @@ export const initialPieceState = [
     type: "PAWN",
     team: 1,
     enPassant: false,
+    possibleMoves: [],
   },
 ];

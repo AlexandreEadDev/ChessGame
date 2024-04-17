@@ -18,7 +18,17 @@ function Board() {
   const referee = new Referee();
   let board = [];
 
+  function updateValidMoves() {
+    setPieces((currentPieces) => {
+      return currentPieces.map((p) => {
+        p.possibleMoves = referee.getValidMoves(p, currentPieces);
+        return p;
+      });
+    });
+  }
+
   function grabPieces(e) {
+    updateValidMoves();
     const chessBoard = chessBoardRef.current;
     const element = e.target;
     if (
@@ -88,6 +98,7 @@ function Board() {
         (p) =>
           p.position.x === grabPosition.x && p.position.y === grabPosition.y
       );
+
       if (currentPiece) {
         const validMove = referee.isValidMove(
           grabPosition,
@@ -121,7 +132,7 @@ function Board() {
                 piece.position.x === x && piece.position.y === y - pawnDirection
               )
             ) {
-              if (piece.type === "PAWN") {
+              if (piece.type === "PAWN" && piece.team) {
                 piece.enPassant = false;
               }
               results.push(piece);
@@ -144,7 +155,6 @@ function Board() {
 
               // Promotion System
               let promotionRow = piece.team === 1 ? 7 : 0;
-              console.log(piece);
               if (piece.type === "PAWN" && y === promotionRow) {
                 setPromotionOpen(true);
                 setpromotionPawn(piece);
@@ -152,6 +162,9 @@ function Board() {
 
               results.push(piece);
             } else if (!(piece.position.x === x && piece.position.y === y)) {
+              if (piece.type === "PAWN") {
+                piece.enPassant = false;
+              }
               results.push(piece);
             }
             return results;
@@ -190,6 +203,7 @@ function Board() {
     return promotionPawn?.team === 1 ? "white" : "black";
   }
 
+  // Board
   for (let j = VERTICAL_AXIS.length - 1; j >= 0; j--) {
     for (let i = 0; i < HORIZONTAL_AXIS.length; i++) {
       const number = j + i + 2;
@@ -198,11 +212,24 @@ function Board() {
       );
       let image = piece ? piece.image : undefined;
 
+      let currentPiece =
+        grabbedPiece != null
+          ? pieces.find(
+              (p) =>
+                p.position.x === grabPosition.x &&
+                p.position.y === grabPosition.y
+            )
+          : undefined;
+      let highlight = currentPiece?.possibleMoves
+        ? currentPiece.possibleMoves.some((p) => p.x === i && p.y === j)
+        : false;
+
       board.push(
         <Tile
           key={`${j},${i}`}
           image={image}
           number={number}
+          highlight={highlight}
           promotionOpen={promotionOpen}
         />
       );
@@ -220,22 +247,38 @@ function Board() {
           >
             <img
               onClick={() => choosePromotion("ROOK")}
-              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
+                promotionTeamType() === "white"
+                  ? "hover:bg-white/50"
+                  : "hover:bg-black/50"
+              }`}
               src={`assets/${promotionTeamType()}-rook.png`}
             />
             <img
               onClick={() => choosePromotion("BISHOP")}
-              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
+                promotionTeamType() === "white"
+                  ? "hover:bg-white/50"
+                  : "hover:bg-black/50"
+              }`}
               src={`assets/${promotionTeamType()}-bishop.png`}
             />
             <img
               onClick={() => choosePromotion("KNIGHT")}
-              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
+                promotionTeamType() === "white"
+                  ? "hover:bg-white/50"
+                  : "hover:bg-black/50"
+              }`}
               src={`assets/${promotionTeamType()}-knight.png`}
             />
             <img
               onClick={() => choosePromotion("QUEEN")}
-              className=" h-28 rounded-full hover:cursor-pointer hover:bg-white/50 p-2 select-none"
+              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
+                promotionTeamType() === "white"
+                  ? "hover:bg-white/50"
+                  : "hover:bg-black/50"
+              }`}
               src={`assets/${promotionTeamType()}-queen.png`}
             />
           </div>
