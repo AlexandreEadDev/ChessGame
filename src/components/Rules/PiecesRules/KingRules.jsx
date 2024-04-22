@@ -1,3 +1,4 @@
+import { Position } from "../../PieceModels/Position";
 import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const kingMove = (prevPosition, nextPosition, team, boardState) => {
@@ -29,10 +30,11 @@ export const getPossibleKingMoves = (king, boardstate) => {
   ];
 
   directions.forEach(({ dx, dy }) => {
-    const destination = {
-      x: king.position.x + dx,
-      y: king.position.y + dy,
-    };
+    const destination = new Position(
+      king.position.x + dx,
+      king.position.y + dy
+    );
+
     // Check if move is inside the board
     if (
       destination.x >= 0 &&

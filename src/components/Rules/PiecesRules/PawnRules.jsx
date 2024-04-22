@@ -81,9 +81,7 @@ export const getPossiblePawnMoves = (pawn, boardState) => {
   if (tileIsOccupiedByOppo(upperLeftAttack, boardState, pawn.team)) {
     possibleMoves.push(upperLeftAttack);
   } else if (!tileIsOccupied(upperLeftAttack, boardState)) {
-    const leftPiece = boardState.find(
-      (p) => p.position.x === leftPosition.x && p.position.y === leftPosition.y
-    );
+    const leftPiece = boardState.find((p) => p.samePosition(leftPosition));
     if (
       leftPiece != null &&
       leftPiece.type === "PAWN" &&
@@ -96,10 +94,7 @@ export const getPossiblePawnMoves = (pawn, boardState) => {
   if (tileIsOccupiedByOppo(upperRightAttack, boardState, pawn.team)) {
     possibleMoves.push(upperRightAttack);
   } else if (!tileIsOccupied(upperRightAttack, boardState)) {
-    const rightPiece = boardState.find(
-      (p) =>
-        p.position.x === rightPosition.x && p.position.y === rightPosition.y
-    );
+    const rightPiece = boardState.find((p) => p.samePosition(rightPosition));
     if (
       rightPiece != null &&
       rightPiece.type === "PAWN" &&

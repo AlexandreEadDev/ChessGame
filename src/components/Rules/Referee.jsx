@@ -13,6 +13,7 @@ import {
 import { getPossibleRookMoves, rookMove } from "./PiecesRules/RookRules.jsx";
 import { getPossibleQueenMoves, queenMove } from "./PiecesRules/QueenRules.jsx";
 import { getPossibleKingMoves, kingMove } from "./PiecesRules/KingRules.jsx";
+import { Position } from "../PieceModels/Position.jsx";
 
 export default function Referee() {
   const [pieces, setPieces] = useState(initialPieceState);
@@ -50,21 +51,17 @@ export default function Referee() {
 
     if (isEnPassantMove) {
       const updatedPieces = pieces.reduce((results, piece) => {
-        if (
-          playedPiece.position.x === piece.position.x &&
-          playedPiece.position.y === piece.position.y
-        ) {
-          piece.enPassant = false;
+        if (piece.samePiecePosition(playedPiece)) {
+          if (piece.isPawn) piece.enPassant = false;
           piece.position.x = destination.x;
           piece.position.y = destination.y;
           results.push(piece);
         } else if (
-          !(
-            piece.position.x === destination.x &&
-            piece.position.y === destination.y - pawnDirection
+          !piece.samePosition(
+            new Position(destination.x, destination.y - pawnDirection)
           )
         ) {
-          if (piece.type === "PAWN" && piece.team) {
+          if (piece.isPawn && piece.team) {
             piece.enPassant = false;
           }
           results.push(piece);
@@ -76,32 +73,27 @@ export default function Referee() {
       setPieces(updatedPieces);
     } else if (validMove) {
       const updatedPieces = pieces.reduce((results, piece) => {
-        if (
-          piece.position.x === playedPiece.position.x &&
-          piece.position.y === playedPiece.position.y
-        ) {
+        if (piece.samePiecePosition(playedPiece)) {
           // EnPassant System
-          piece.enPassant =
-            Math.abs(playedPiece.position.y - destination.y) === 2 &&
-            piece.type === "PAWN";
+          if (piece.isPawn)
+            piece.enPassant =
+              Math.abs(playedPiece.position.y - destination.y) === 2 &&
+              piece.type === "PAWN";
           piece.position.x = destination.x;
           piece.position.y = destination.y;
 
           // Promotion System
           let promotionRow = piece.team === "WHITE" ? 7 : 0;
-          if (piece.type === "PAWN" && destination.y === promotionRow) {
+          if (piece.isPawn && destination.y === promotionRow) {
             setPromotionOpen(true);
             setpromotionPawn(piece);
           }
 
           results.push(piece);
         } else if (
-          !(
-            piece.position.x === destination.x &&
-            piece.position.y === destination.y
-          )
+          !piece.samePosition(new Position(destination.x, destination.y))
         ) {
-          if (piece.type === "PAWN") {
+          if (piece.isPawn) {
             piece.enPassant = false;
           }
           results.push(piece);
@@ -129,6 +121,7 @@ export default function Referee() {
           (p) =>
             p.position.x === nextPosition.x &&
             p.position.y === nextPosition.y - pawnDirection &&
+            p.isPawn &&
             p.enPassant &&
             p.team !== team
         );
@@ -188,7 +181,7 @@ export default function Referee() {
       return;
     }
     const updatedPieces = pieces.reduce((results, piece) => {
-      if (piece.position === promotionPawn?.position) {
+      if (piece.samePiecePosition(promotionPawn)) {
         piece.type = type;
         piece.image = `assets/${piece.team.toLowerCase()}-${type.toLowerCase()}.png`;
       }
@@ -197,6 +190,7 @@ export default function Referee() {
     }, []);
     setPieces(updatedPieces);
     setPromotionOpen(false);
+    updatePossibleMoves();
   }
 
   return (

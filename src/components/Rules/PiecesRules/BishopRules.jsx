@@ -39,10 +39,10 @@ export const getPossibleBishopMoves = (bishop, boardstate) => {
 
   directions.forEach(({ dx, dy }) => {
     for (let i = 1; i < 8; i++) {
-      const destination = {
-        x: bishop.position.x + dx * i,
-        y: bishop.position.y + dy * i,
-      };
+      const destination = new Position(
+        bishop.position.x + dx * i,
+        bishop.position.y + dy * i
+      );
       if (!tileIsOccupied(destination, boardstate)) {
         possibleMoves.push(destination);
       } else if (tileIsOccupiedByOppo(destination, boardstate, bishop.team)) {

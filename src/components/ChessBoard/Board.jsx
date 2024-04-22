@@ -77,12 +77,7 @@ function Board({ playMove, pieces, promotionOpen }) {
         Math.ceil((e.clientY - chessBoard.offsetTop - 600) / 75)
       );
 
-      const currentPiece = pieces.find(
-        (p) =>
-          p.position.x === grabPosition.x && p.position.y === grabPosition.y
-      );
-      console.log(currentPiece);
-
+      const currentPiece = pieces.find((p) => p.samePosition(grabPosition));
       if (currentPiece) {
         var success = playMove(currentPiece, new Position(x, y));
 
@@ -100,21 +95,17 @@ function Board({ playMove, pieces, promotionOpen }) {
   for (let j = VERTICAL_AXIS.length - 1; j >= 0; j--) {
     for (let i = 0; i < HORIZONTAL_AXIS.length; i++) {
       const number = j + i + 2;
-      const piece = pieces.find(
-        (p) => p.position.x === i && p.position.y === j
-      );
+      const piece = pieces.find((p) => p.samePosition(new Position(i, j)));
       let image = piece ? piece.image : undefined;
 
       let currentPiece =
         grabbedPiece != null
-          ? pieces.find(
-              (p) =>
-                p.position.x === grabPosition.x &&
-                p.position.y === grabPosition.y
-            )
+          ? pieces.find((p) => p.samePosition(grabPosition))
           : undefined;
       let highlight = currentPiece?.possibleMoves
-        ? currentPiece.possibleMoves.some((p) => p.x === i && p.y === j)
+        ? currentPiece.possibleMoves.some((p) =>
+            p.samePosition(new Position(i, j))
+          )
         : false;
 
       board.push(
