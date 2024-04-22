@@ -1,4 +1,5 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { Position } from "../../PieceModels/Position";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const queenMove = (prevPosition, nextPosition, team, boardState) => {
   // Check for vertical movement
@@ -6,7 +7,7 @@ export const queenMove = (prevPosition, nextPosition, team, boardState) => {
     const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
     let posY = prevPosition.y + directionY;
     while (posY !== nextPosition.y) {
-      if (tileIsOccupied({ x: prevPosition.x, y: posY }, boardState)) {
+      if (tileIsOccupied(new Position(prevPosition.x, posY), boardState)) {
         return false;
       }
       posY += directionY;
@@ -22,7 +23,7 @@ export const queenMove = (prevPosition, nextPosition, team, boardState) => {
     const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
     let posX = prevPosition.x + directionX;
     while (posX !== nextPosition.x) {
-      if (tileIsOccupied({ x: posX, y: prevPosition.y }, boardState)) {
+      if (tileIsOccupied(new Position(posX, prevPosition.y), boardState)) {
         return false;
       }
       posX += directionX;
@@ -43,7 +44,7 @@ export const queenMove = (prevPosition, nextPosition, team, boardState) => {
     let posX = prevPosition.x + directionX;
     let posY = prevPosition.y + directionY;
     while (posX !== nextPosition.x && posY !== nextPosition.y) {
-      if (tileIsOccupied({ x: posX, y: posY }, boardState)) {
+      if (tileIsOccupied(new Position(posX, posY), boardState)) {
         return false;
       }
       posX += directionX;
@@ -74,10 +75,10 @@ export const getPossibleQueenMoves = (queen, boardstate) => {
 
   directions.forEach(({ dx, dy }) => {
     for (let i = 1; i < 8; i++) {
-      const destination = {
-        x: queen.position.x + dx * i,
-        y: queen.position.y + dy * i,
-      };
+      const destination = new Position(
+        queen.position.x + dx * i,
+        queen.position.y + dy * i
+      );
       if (
         destination.x < 0 ||
         destination.x > 7 ||

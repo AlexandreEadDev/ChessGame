@@ -1,4 +1,5 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { Position } from "../../PieceModels/Position";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const knightMove = (prevPosition, nextPosition, team, boardState) => {
   // MOVEMENT LOGIC
@@ -36,15 +37,14 @@ export const getPossibleKightMoves = (knight, boardState) => {
 
   for (let i = -1; i < 2; i += 2) {
     for (let j = -1; j < 2; j += 2) {
-      const verticalMove = {
-        x: knight.position.x + j,
-        y: knight.position.y + i * 2,
-      };
-      const horizontalMove = {
-        x: knight.position.x + i * 2,
-        y: knight.position.y + j,
-      };
-
+      const verticalMove = new Position(
+        knight.position.x + j,
+        knight.position.y + i * 2
+      );
+      const horizontalMove = new Position(
+        knight.position.x + i * 2,
+        knight.position.y + j
+      );
       if (
         !tileIsOccupied(verticalMove, boardState) ||
         tileIsOccupiedByOppo(verticalMove, boardState, knight.team)

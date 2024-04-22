@@ -1,8 +1,9 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { Position } from "../../PieceModels/Position";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const pawnMove = (prevPosition, nextPosition, team, boardState) => {
-  const specialRow = team === 1 ? 1 : 6;
-  const pawnDirection = team === 1 ? 1 : -1;
+  const specialRow = team === "WHITE" ? 1 : 6;
+  const pawnDirection = team === "WHITE" ? 1 : -1;
 
   // MOVEMENT LOGIC
   if (
@@ -13,7 +14,7 @@ export const pawnMove = (prevPosition, nextPosition, team, boardState) => {
     if (
       !tileIsOccupied(nextPosition, boardState) &&
       !tileIsOccupied(
-        { x: nextPosition.x, y: nextPosition.y - pawnDirection },
+        new Position(nextPosition.x, nextPosition.y - pawnDirection),
         boardState
       )
     ) {
@@ -49,23 +50,23 @@ export const pawnMove = (prevPosition, nextPosition, team, boardState) => {
 
 export const getPossiblePawnMoves = (pawn, boardState) => {
   const possibleMoves = [];
-  const pawnDirection = pawn.team === 1 ? 1 : -1;
-  const specialRow = pawn.team === 1 ? 1 : 6;
-  const normalMove = { x: pawn.position.x, y: pawn.position.y + pawnDirection };
-  const specialMove = {
-    x: normalMove.x,
-    y: normalMove.y + pawnDirection,
-  };
-  const upperLeftAttack = {
-    x: pawn.position.x - 1,
-    y: pawn.position.y + pawnDirection,
-  };
-  const upperRightAttack = {
-    x: pawn.position.x + 1,
-    y: pawn.position.y + pawnDirection,
-  };
-  const leftPosition = { x: pawn.position.x - 1, y: pawn.position.y };
-  const rightPosition = { x: pawn.position.x + 1, y: pawn.position.y };
+  const pawnDirection = pawn.team === "WHITE" ? 1 : -1;
+  const specialRow = pawn.team === "WHITE" ? 1 : 6;
+  const normalMove = new Position(
+    pawn.position.x,
+    pawn.position.y + pawnDirection
+  );
+  const specialMove = new Position(normalMove.x, normalMove.y + pawnDirection);
+  const upperLeftAttack = new Position(
+    pawn.position.x - 1,
+    pawn.position.y + pawnDirection
+  );
+  const upperRightAttack = new Position(
+    pawn.position.x + 1,
+    pawn.position.y + pawnDirection
+  );
+  const leftPosition = new Position(pawn.position.x - 1, pawn.position.y);
+  const rightPosition = new Position(pawn.position.x + 1, pawn.position.y);
 
   if (!tileIsOccupied(normalMove, boardState)) {
     possibleMoves.push(normalMove);

@@ -1,4 +1,4 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const kingMove = (prevPosition, nextPosition, team, boardState) => {
   // Check if the movement is within one tile in any direction

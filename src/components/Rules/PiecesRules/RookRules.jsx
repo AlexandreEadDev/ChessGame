@@ -1,4 +1,5 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { Position } from "../../PieceModels/Position";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const rookMove = (prevPosition, nextPosition, team, boardState) => {
   // Check for vertical movement
@@ -6,12 +7,11 @@ export const rookMove = (prevPosition, nextPosition, team, boardState) => {
     const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
     let posY = prevPosition.y + directionY;
     while (posY !== nextPosition.y) {
-      if (tileIsOccupied({ x: prevPosition.x, y: posY }, boardState)) {
-        return false; // Invalid move if the path is blocked
+      if (tileIsOccupied(new Position(prevPosition.x, posY), boardState)) {
+        return false;
       }
       posY += directionY;
     }
-    // No obstacles encountered, and the destination is valid
     return (
       !tileIsOccupied(nextPosition, boardState) ||
       tileIsOccupiedByOppo(nextPosition, boardState, team)
@@ -23,12 +23,11 @@ export const rookMove = (prevPosition, nextPosition, team, boardState) => {
     const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
     let posX = prevPosition.x + directionX;
     while (posX !== nextPosition.x) {
-      if (tileIsOccupied({ x: posX, y: prevPosition.y }, boardState)) {
-        return false; // Invalid move if the path is blocked
+      if (tileIsOccupied(new Position(posX, prevPosition.y), boardState)) {
+        return false;
       }
       posX += directionX;
     }
-    // No obstacles encountered, and the destination is valid
     return (
       !tileIsOccupied(nextPosition, boardState) ||
       tileIsOccupiedByOppo(nextPosition, boardState, team)
@@ -49,11 +48,10 @@ export const getPossibleRookMoves = (rook, boardstate) => {
 
   directions.forEach(({ dx, dy }) => {
     for (let i = 1; i < 8; i++) {
-      const destination = {
-        x: rook.position.x + dx * i,
-        y: rook.position.y + dy * i,
-      };
-
+      const destination = new Position(
+        rook.position.x + dx * i,
+        rook.position.y + dy * i
+      );
       if (
         destination.x < 0 ||
         destination.x > 7 ||

@@ -1,4 +1,5 @@
-import { tileIsOccupied, tileIsOccupiedByOppo } from "./GeneralRules";
+import { Position } from "../../PieceModels/Position";
+import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
 
 export const bishopMove = (prevPosition, nextPosition, team, boardState) => {
   // Check for diagonal movement
@@ -11,7 +12,7 @@ export const bishopMove = (prevPosition, nextPosition, team, boardState) => {
     let posX = prevPosition.x + directionX;
     let posY = prevPosition.y + directionY;
     while (posX !== nextPosition.x && posY !== nextPosition.y) {
-      if (tileIsOccupied({ x: posX, y: posY }, boardState)) {
+      if (tileIsOccupied(new Position(posX, posY), boardState)) {
         return false; // Invalid move if the path is blocked
       }
       posX += directionX;
