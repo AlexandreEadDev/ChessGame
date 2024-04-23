@@ -1,58 +1,70 @@
 import { Position } from "../../PieceModels/Position";
-import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
+import {
+  tileIsEmptyOrOccupiedByOppo,
+  tileIsOccupied,
+  tileIsOccupiedByOppo,
+} from "../GeneralRules";
+
+const getMovesInDirection = (bishop, boardstate, dx, dy) => {
+  const possibleMoves = [];
+  let x = bishop.position.x + dx;
+  let y = bishop.position.y + dy;
+
+  while (x >= 0 && x < 8 && y >= 0 && y < 8) {
+    const destination = new Position(x, y);
+    if (!tileIsOccupied(destination, boardstate)) {
+      possibleMoves.push(destination);
+    } else if (tileIsOccupiedByOppo(destination, boardstate, bishop.team)) {
+      possibleMoves.push(destination);
+      break;
+    } else {
+      break;
+    }
+    x += dx;
+    y += dy;
+  }
+
+  return possibleMoves;
+};
 
 export const bishopMove = (prevPosition, nextPosition, team, boardState) => {
-  // Check for diagonal movement
-  const isDiagonalMove =
-    Math.abs(prevPosition.x - nextPosition.x) ===
-    Math.abs(prevPosition.y - nextPosition.y);
-  if (isDiagonalMove) {
-    const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
-    const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
-    let posX = prevPosition.x + directionX;
-    let posY = prevPosition.y + directionY;
-    while (posX !== nextPosition.x && posY !== nextPosition.y) {
-      if (tileIsOccupied(new Position(posX, posY), boardState)) {
-        return false; // Invalid move if the path is blocked
-      }
-      posX += directionX;
-      posY += directionY;
-    }
-    // No obstacles encountered, and the destination is valid
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
+  const dx = Math.sign(nextPosition.x - prevPosition.x);
+  const dy = Math.sign(nextPosition.y - prevPosition.y);
+
+  if (
+    Math.abs(nextPosition.x - prevPosition.x) ===
+    Math.abs(nextPosition.y - prevPosition.y)
+  ) {
+    return getMovesInDirection(
+      { position: prevPosition, team },
+      boardState,
+      dx,
+      dy
+    ).some(
+      (move) =>
+        move.samePosition(nextPosition) &&
+        tileIsEmptyOrOccupiedByOppo(move, boardState, team)
     );
   }
+
   return false;
 };
 
 export const getPossibleBishopMoves = (bishop, boardstate) => {
   const possibleMoves = [];
 
+  // Define all four diagonal directions
   const directions = [
-    { dx: 1, dy: 1 },
-    { dx: 1, dy: -1 },
-    { dx: -1, dy: 1 },
-    { dx: -1, dy: -1 },
+    [1, 1],
+    [1, -1],
+    [-1, -1],
+    [-1, 1],
   ];
 
-  directions.forEach(({ dx, dy }) => {
-    for (let i = 1; i < 8; i++) {
-      const destination = new Position(
-        bishop.position.x + dx * i,
-        bishop.position.y + dy * i
-      );
-      if (!tileIsOccupied(destination, boardstate)) {
-        possibleMoves.push(destination);
-      } else if (tileIsOccupiedByOppo(destination, boardstate, bishop.team)) {
-        possibleMoves.push(destination);
-        break;
-      } else {
-        break;
-      }
-    }
-  });
+  // Iterate over each direction
+  for (const [dx, dy] of directions) {
+    possibleMoves.push(...getMovesInDirection(bishop, boardstate, dx, dy));
+  }
 
   return possibleMoves;
 };

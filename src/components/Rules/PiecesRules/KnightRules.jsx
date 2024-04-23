@@ -1,5 +1,5 @@
 import { Position } from "../../PieceModels/Position";
-import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
+import { tileIsEmptyOrOccupiedByOppo } from "../GeneralRules";
 
 export const knightMove = (prevPosition, nextPosition, team, boardState) => {
   // MOVEMENT LOGIC
@@ -8,10 +8,7 @@ export const knightMove = (prevPosition, nextPosition, team, boardState) => {
       // TOP/BOTTOM MOVEMENT
       if (nextPosition.y - prevPosition.y === 2 * i) {
         if (nextPosition.x - prevPosition.x === j) {
-          if (
-            !tileIsOccupied(nextPosition, boardState) ||
-            tileIsOccupiedByOppo(nextPosition, boardState, team)
-          ) {
+          if (tileIsEmptyOrOccupiedByOppo(nextPosition, boardState, team)) {
             return true;
           }
         }
@@ -20,10 +17,7 @@ export const knightMove = (prevPosition, nextPosition, team, boardState) => {
       // LEFT/RIGHT MOVEMENT
       if (nextPosition.x - prevPosition.x === 2 * i) {
         if (nextPosition.y - prevPosition.y === j) {
-          if (
-            !tileIsOccupied(nextPosition, boardState) ||
-            tileIsOccupiedByOppo(nextPosition, boardState, team)
-          ) {
+          if (tileIsEmptyOrOccupiedByOppo(nextPosition, boardState, team)) {
             return true;
           }
         }
@@ -45,16 +39,12 @@ export const getPossibleKnightMoves = (knight, boardState) => {
         knight.position.x + i * 2,
         knight.position.y + j
       );
-      if (
-        !tileIsOccupied(verticalMove, boardState) ||
-        tileIsOccupiedByOppo(verticalMove, boardState, knight.team)
-      ) {
+      if (tileIsEmptyOrOccupiedByOppo(verticalMove, boardState, knight.team)) {
         possibleMoves.push(verticalMove);
       }
 
       if (
-        !tileIsOccupied(horizontalMove, boardState) ||
-        tileIsOccupiedByOppo(horizontalMove, boardState, knight.team)
+        tileIsEmptyOrOccupiedByOppo(horizontalMove, boardState, knight.team)
       ) {
         possibleMoves.push(horizontalMove);
       }

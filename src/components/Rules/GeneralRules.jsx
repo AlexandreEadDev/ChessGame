@@ -16,3 +16,10 @@ export const tileIsOccupiedByOppo = (position, boardState, team) => {
     return false;
   }
 };
+
+export const tileIsEmptyOrOccupiedByOppo = (position, boardState, team) => {
+  return (
+    !tileIsOccupied(position, boardState) ||
+    tileIsOccupiedByOppo(position, boardState, team)
+  );
+};

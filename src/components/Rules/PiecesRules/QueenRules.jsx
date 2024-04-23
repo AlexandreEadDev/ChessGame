@@ -1,58 +1,63 @@
 import { Position } from "../../PieceModels/Position";
-import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
+import {
+  tileIsEmptyOrOccupiedByOppo,
+  tileIsOccupied,
+  tileIsOccupiedByOppo,
+} from "../GeneralRules";
+
+const getMovesInDirection = (queen, boardstate, dx, dy) => {
+  const possibleMoves = [];
+  let x = queen.position.x + dx;
+  let y = queen.position.y + dy;
+
+  while (x >= 0 && x < 8 && y >= 0 && y < 8) {
+    const destination = new Position(x, y);
+    if (!tileIsOccupied(destination, boardstate)) {
+      possibleMoves.push(destination);
+    } else if (tileIsOccupiedByOppo(destination, boardstate, queen.team)) {
+      possibleMoves.push(destination);
+      break;
+    } else {
+      break;
+    }
+    x += dx;
+    y += dy;
+  }
+
+  return possibleMoves;
+};
 
 export const queenMove = (prevPosition, nextPosition, team, boardState) => {
-  // Check for vertical movement
-  if (prevPosition.x === nextPosition.x) {
-    const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
-    let posY = prevPosition.y + directionY;
-    while (posY !== nextPosition.y) {
-      if (tileIsOccupied(new Position(prevPosition.x, posY), boardState)) {
-        return false;
-      }
-      posY += directionY;
-    }
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
-    );
-  }
+  const dx = Math.sign(nextPosition.x - prevPosition.x);
+  const dy = Math.sign(nextPosition.y - prevPosition.y);
 
-  // Check for horizontal movement
-  if (prevPosition.y === nextPosition.y) {
-    const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
-    let posX = prevPosition.x + directionX;
-    while (posX !== nextPosition.x) {
-      if (tileIsOccupied(new Position(posX, prevPosition.y), boardState)) {
-        return false;
-      }
-      posX += directionX;
-    }
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
+  if (
+    Math.abs(nextPosition.x - prevPosition.x) ===
+    Math.abs(nextPosition.y - prevPosition.y)
+  ) {
+    return getMovesInDirection(
+      { position: prevPosition, team },
+      boardState,
+      dx,
+      dy
+    ).some(
+      (move) =>
+        move.samePosition(nextPosition) &&
+        tileIsEmptyOrOccupiedByOppo(move, boardState, team)
     );
-  }
-
-  const isDiagonalMove =
-    Math.abs(prevPosition.x - nextPosition.x) ===
-    Math.abs(prevPosition.y - nextPosition.y);
-  // Check for diagonal movement
-  if (isDiagonalMove) {
-    const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
-    const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
-    let posX = prevPosition.x + directionX;
-    let posY = prevPosition.y + directionY;
-    while (posX !== nextPosition.x && posY !== nextPosition.y) {
-      if (tileIsOccupied(new Position(posX, posY), boardState)) {
-        return false;
-      }
-      posX += directionX;
-      posY += directionY;
-    }
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
+  } else if (
+    nextPosition.x === prevPosition.x ||
+    nextPosition.y === prevPosition.y
+  ) {
+    return getMovesInDirection(
+      { position: prevPosition, team },
+      boardState,
+      dx,
+      dy
+    ).some(
+      (move) =>
+        move.samePosition(nextPosition) &&
+        tileIsEmptyOrOccupiedByOppo(move, boardState, team)
     );
   }
 
@@ -62,41 +67,22 @@ export const queenMove = (prevPosition, nextPosition, team, boardState) => {
 export const getPossibleQueenMoves = (queen, boardstate) => {
   const possibleMoves = [];
 
+  // Define all eight directions
   const directions = [
-    { dx: 1, dy: 1 },
-    { dx: 1, dy: -1 },
-    { dx: -1, dy: 1 },
-    { dx: -1, dy: -1 },
-    { dx: 0, dy: 1 },
-    { dx: 0, dy: -1 },
-    { dx: -1, dy: 0 },
-    { dx: 1, dy: 0 },
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+    [0, -1], // horizontal and vertical
+    [1, 1],
+    [-1, 1],
+    [1, -1],
+    [-1, -1], // diagonal
   ];
 
-  directions.forEach(({ dx, dy }) => {
-    for (let i = 1; i < 8; i++) {
-      const destination = new Position(
-        queen.position.x + dx * i,
-        queen.position.y + dy * i
-      );
-      if (
-        destination.x < 0 ||
-        destination.x > 7 ||
-        destination.y < 0 ||
-        destination.y > 7
-      )
-        break;
-
-      if (!tileIsOccupied(destination, boardstate)) {
-        possibleMoves.push(destination);
-      } else if (tileIsOccupiedByOppo(destination, boardstate, queen.team)) {
-        possibleMoves.push(destination);
-        break;
-      } else {
-        break;
-      }
-    }
-  });
+  // Iterate over each direction
+  for (const [dx, dy] of directions) {
+    possibleMoves.push(...getMovesInDirection(queen, boardstate, dx, dy));
+  }
 
   return possibleMoves;
 };

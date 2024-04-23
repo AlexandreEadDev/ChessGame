@@ -1,75 +1,67 @@
 import { Position } from "../../PieceModels/Position";
-import { tileIsOccupied, tileIsOccupiedByOppo } from "../GeneralRules";
+import {
+  tileIsEmptyOrOccupiedByOppo,
+  tileIsOccupied,
+  tileIsOccupiedByOppo,
+} from "../GeneralRules";
+
+const getMovesInDirection = (rook, boardstate, dx, dy) => {
+  const possibleMoves = [];
+  let x = rook.position.x + dx;
+  let y = rook.position.y + dy;
+
+  while (x >= 0 && x < 8 && y >= 0 && y < 8) {
+    const destination = new Position(x, y);
+    if (!tileIsOccupied(destination, boardstate)) {
+      possibleMoves.push(destination);
+    } else if (tileIsOccupiedByOppo(destination, boardstate, rook.team)) {
+      possibleMoves.push(destination);
+      break;
+    } else {
+      break;
+    }
+    x += dx;
+    y += dy;
+  }
+
+  return possibleMoves;
+};
 
 export const rookMove = (prevPosition, nextPosition, team, boardState) => {
-  // Check for vertical movement
-  if (prevPosition.x === nextPosition.x) {
-    const directionY = nextPosition.y > prevPosition.y ? 1 : -1;
-    let posY = prevPosition.y + directionY;
-    while (posY !== nextPosition.y) {
-      if (tileIsOccupied(new Position(prevPosition.x, posY), boardState)) {
-        return false;
-      }
-      posY += directionY;
-    }
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
+  const dx = Math.sign(nextPosition.x - prevPosition.x);
+  const dy = Math.sign(nextPosition.y - prevPosition.y);
+
+  if (prevPosition.x === nextPosition.x || prevPosition.y === nextPosition.y) {
+    return getMovesInDirection(
+      { position: prevPosition, team },
+      boardState,
+      dx,
+      dy
+    ).some(
+      (move) =>
+        move.samePosition(nextPosition) &&
+        tileIsEmptyOrOccupiedByOppo(move, boardState, team)
     );
   }
 
-  // Check for horizontal movement
-  if (prevPosition.y === nextPosition.y) {
-    const directionX = nextPosition.x > prevPosition.x ? 1 : -1;
-    let posX = prevPosition.x + directionX;
-    while (posX !== nextPosition.x) {
-      if (tileIsOccupied(new Position(posX, prevPosition.y), boardState)) {
-        return false;
-      }
-      posX += directionX;
-    }
-    return (
-      !tileIsOccupied(nextPosition, boardState) ||
-      tileIsOccupiedByOppo(nextPosition, boardState, team)
-    );
-  }
   return false;
 };
 
 export const getPossibleRookMoves = (rook, boardstate) => {
   const possibleMoves = [];
 
+  // Define all four cardinal directions
   const directions = [
-    { dx: 0, dy: 1 },
-    { dx: 0, dy: -1 },
-    { dx: -1, dy: 0 },
-    { dx: 1, dy: 0 },
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+    [0, -1],
   ];
 
-  directions.forEach(({ dx, dy }) => {
-    for (let i = 1; i < 8; i++) {
-      const destination = new Position(
-        rook.position.x + dx * i,
-        rook.position.y + dy * i
-      );
-      if (
-        destination.x < 0 ||
-        destination.x > 7 ||
-        destination.y < 0 ||
-        destination.y > 7
-      )
-        break;
-
-      if (!tileIsOccupied(destination, boardstate)) {
-        possibleMoves.push(destination);
-      } else if (tileIsOccupiedByOppo(destination, boardstate, rook.team)) {
-        possibleMoves.push(destination);
-        break;
-      } else {
-        break;
-      }
-    }
-  });
+  // Iterate over each direction
+  for (const [dx, dy] of directions) {
+    possibleMoves.push(...getMovesInDirection(rook, boardstate, dx, dy));
+  }
 
   return possibleMoves;
 };
