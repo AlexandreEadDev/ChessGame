@@ -1,3 +1,4 @@
+import { ChessBoard } from "../Rules/ChessBoard";
 import { Pawn } from "./Pawn";
 import { Piece } from "./Piece";
 import { Position } from "./Position";
@@ -6,7 +7,7 @@ export const VERTICAL_AXIS = ["1", "2", "3", "4", "5", "6", "7", "8"];
 export const HORIZONTAL_AXIS = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const GRID_SIZE = 75;
 
-export const initialPieceState = [
+export const initialBoard = new ChessBoard([
   new Piece(new Position(0, 7), "ROOK", "BLACK"),
   new Piece(new Position(1, 7), "KNIGHT", "BLACK"),
   new Piece(new Position(2, 7), "BISHOP", "BLACK"),
@@ -39,4 +40,4 @@ export const initialPieceState = [
   new Pawn(new Position(5, 1), "WHITE"),
   new Pawn(new Position(6, 1), "WHITE"),
   new Pawn(new Position(7, 1), "WHITE"),
-];
+]);

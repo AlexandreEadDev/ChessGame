@@ -39,4 +39,13 @@ export class Piece {
   samePosition(otherPosition) {
     return this.position.samePosition(otherPosition);
   }
+
+  clone() {
+    return new Piece(
+      this.position.clone(),
+      this.type,
+      this.team,
+      this.possibleMoves?.map((m) => m.clone())
+    );
+  }
 }

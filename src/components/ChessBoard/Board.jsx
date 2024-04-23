@@ -79,7 +79,7 @@ function Board({ playMove, pieces, promotionOpen }) {
 
       const currentPiece = pieces.find((p) => p.samePosition(grabPosition));
       if (currentPiece) {
-        var success = playMove(currentPiece, new Position(x, y));
+        var success = playMove(currentPiece.clone(), new Position(x, y));
 
         if (!success) {
           grabbedPiece.style.position = "relative";

@@ -32,7 +32,7 @@ export const knightMove = (prevPosition, nextPosition, team, boardState) => {
   }
 };
 
-export const getPossibleKightMoves = (knight, boardState) => {
+export const getPossibleKnightMoves = (knight, boardState) => {
   const possibleMoves = [];
 
   for (let i = -1; i < 2; i += 2) {
