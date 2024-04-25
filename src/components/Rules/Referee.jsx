@@ -15,22 +15,25 @@ export default function Referee() {
   const [promotionPawn, setPromotionPawn] = useState();
 
   useEffect(() => {
-    updatePossibleMoves();
+    board.calculateAllMoves();
   }, []);
 
-  function updatePossibleMoves() {
-    board.calculateAllMoves();
-  }
-
   function playMove(playedPiece, destination) {
+    if (playedPiece.possibleMoves === undefined) return false;
+
+    // Prevent the inactive team from playing
+    if (playedPiece.team === "WHITE" && board.totalTurns % 2 !== 1)
+      return false;
+    if (playedPiece.team === "BLACK" && board.totalTurns % 2 !== 0)
+      return false;
+
     let playedMoveIsValid = false;
 
-    const validMove = isValidMove(
-      playedPiece.position,
-      destination,
-      playedPiece.type,
-      playedPiece.team
+    const validMove = playedPiece.possibleMoves?.some((m) =>
+      m.samePosition(destination)
     );
+
+    if (!validMove) return false;
 
     const enPassantMove = isEnPassantMove(
       playedPiece.position,
@@ -39,16 +42,17 @@ export default function Referee() {
       playedPiece.team
     );
 
-    setBoard(() => {
-      // Playing the move
-      playedMoveIsValid = board.playMove(
+    setBoard((previousBoard) => {
+      const clonedBoard = board.clone();
+      clonedBoard.totalTurns += 1;
+      playedMoveIsValid = clonedBoard.playMove(
         enPassantMove,
         validMove,
         playedPiece,
         destination
       );
 
-      return board.clone();
+      return clonedBoard;
     });
 
     let promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
@@ -88,30 +92,6 @@ export default function Referee() {
     return false;
   }
 
-  function isValidMove(prevPosition, nextPosition, type, team) {
-    let validMove = false;
-    switch (type) {
-      case (type = "PAWN"):
-        validMove = pawnMove(prevPosition, nextPosition, team, board.pieces);
-        break;
-      case (type = "KNIGHT"):
-        validMove = knightMove(prevPosition, nextPosition, team, board.pieces);
-        break;
-      case (type = "BISHOP"):
-        validMove = bishopMove(prevPosition, nextPosition, team, board.pieces);
-        break;
-      case (type = "ROOK"):
-        validMove = rookMove(prevPosition, nextPosition, team, board.pieces);
-        break;
-      case (type = "QUEEN"):
-        validMove = queenMove(prevPosition, nextPosition, team, board.pieces);
-        break;
-      case (type = "KING"):
-        validMove = kingMove(prevPosition, nextPosition, team, board.pieces);
-    }
-    return validMove;
-  }
-
   function choosePromotion(type) {
     if (promotionPawn === undefined) {
       return;
@@ -135,6 +115,7 @@ export default function Referee() {
 
   return (
     <>
+      <p className=" text-white text-2xl">{board.totalTurns}</p>
       {promotionOpen ? (
         <>
           <div

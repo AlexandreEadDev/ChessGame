@@ -33,7 +33,7 @@ function Board({ playMove, pieces, promotionOpen }) {
       element.style.position = "absolute";
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
-      element.style.zIndex = "20";
+      element.style.zIndex = "50";
 
       setGrabbedPiece(element);
     }
