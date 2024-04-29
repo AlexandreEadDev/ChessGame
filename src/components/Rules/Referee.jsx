@@ -1,16 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Board from "../ChessBoard/Board.jsx";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 
 export default function Referee() {
-  const [board, setBoard] = useState(initialBoard);
+  const [board, setBoard] = useState(initialBoard.clone());
   const [promotionOpen, setPromotionOpen] = useState(false);
+  const [checkMateOpen, setcheckMateOpen] = useState(false);
   const [promotionPawn, setPromotionPawn] = useState();
-
-  useEffect(() => {
-    board.calculateAllMoves();
-  }, []);
 
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
@@ -45,6 +42,10 @@ export default function Referee() {
         playedPiece,
         destination
       );
+
+      if (clonedBoard.winningTeam !== undefined) {
+        setcheckMateOpen(true);
+      }
 
       return clonedBoard;
     });
@@ -109,6 +110,11 @@ export default function Referee() {
     setPromotionOpen(false);
   }
 
+  function restartGame() {
+    setcheckMateOpen(false);
+    setBoard(initialBoard.clone());
+  }
+
   const team = board.totalTurns % 2 !== 0 ? "White" : "Black";
 
   return (
@@ -161,6 +167,26 @@ export default function Referee() {
             />
           </div>
         </>
+      ) : (
+        <> </>
+      )}
+      {checkMateOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-8 max-w-md">
+            <div className="flex items-center justify-center flex-col">
+              <span className="block mb-4">
+                The winning team is{" "}
+                {(board.winningTeam === team) === "WHITE" ? "white" : "black"}!
+              </span>
+              <button
+                onClick={restartGame}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >
+                Play again
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
         <> </>
       )}

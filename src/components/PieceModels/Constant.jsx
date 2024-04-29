@@ -44,3 +44,5 @@ export const initialBoard = new ChessBoard(
   ],
   1
 );
+
+initialBoard.calculateAllMoves();
