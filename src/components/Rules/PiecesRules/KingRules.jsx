@@ -6,242 +6,87 @@ import {
 } from "../GeneralRules";
 
 export const kingMove = (prevPosition, nextPosition, team, boardState) => {
-  for (let i = 1; i < 2; i++) {
-    //Diagonal
-    let multiplierX =
-      nextPosition.x < prevPosition.x
-        ? -1
-        : nextPosition.x > prevPosition.x
-        ? 1
-        : 0;
-    let multiplierY =
-      nextPosition.y < prevPosition.y
-        ? -1
-        : nextPosition.y > prevPosition.y
-        ? 1
-        : 0;
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1], // straight
+    [1, 1],
+    [-1, 1],
+    [1, -1],
+    [-1, -1], // diagonal
+  ];
 
-    let passedPosition = new Position(
-      prevPosition.x + i * multiplierX,
-      prevPosition.y + i * multiplierY
-    );
+  for (const [dx, dy] of directions) {
+    let x = prevPosition.x;
+    let y = prevPosition.y;
 
-    if (passedPosition.samePosition(nextPosition)) {
-      if (tileIsEmptyOrOccupiedByOppo(passedPosition, boardState, team)) {
-        return true;
-      }
-    } else {
-      if (tileIsOccupied(passedPosition, boardState)) {
-        break;
+    while (true) {
+      x += dx;
+      y += dy;
+
+      if (x < 0 || x > 7 || y < 0 || y > 7) break;
+
+      const passedPosition = new Position(x, y);
+
+      if (passedPosition.samePosition(nextPosition)) {
+        if (tileIsEmptyOrOccupiedByOppo(passedPosition, boardState, team)) {
+          return true;
+        }
+      } else {
+        if (tileIsOccupied(passedPosition, boardState)) {
+          break;
+        }
       }
     }
   }
+
   return false;
 };
 
 export const getPossibleKingMoves = (king, boardstate) => {
+  const directions = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+    [1, 1],
+    [-1, 1],
+    [1, -1],
+    [-1, -1],
+  ];
   const possibleMoves = [];
 
-  // Top movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x, king.position.y + i);
+  for (const [dx, dy] of directions) {
+    let x = king.position.x;
+    let y = king.position.y;
 
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
+    for (let i = 1; i < 2; i++) {
+      x += dx * i;
+      y += dy * i;
 
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
+      if (x < 0 || x > 7 || y < 0 || y > 7) break;
 
-  // Bottom movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x, king.position.y - i);
+      const destination = new Position(x, y);
 
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Left movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x - i, king.position.y);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Right movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x + i, king.position.y);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Upper right movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x + i, king.position.y + i);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Bottom right movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x + i, king.position.y - i);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Bottom left movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x - i, king.position.y - i);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
-    }
-  }
-
-  // Top left movement
-  for (let i = 1; i < 2; i++) {
-    const destination = new Position(king.position.x - i, king.position.y + i);
-
-    // If the move is outside of the board don't add it
-    if (
-      destination.x < 0 ||
-      destination.x > 7 ||
-      destination.y < 0 ||
-      destination.y > 7
-    ) {
-      break;
-    }
-
-    if (!tileIsOccupied(destination, boardstate)) {
-      possibleMoves.push(destination);
-    } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
-      possibleMoves.push(destination);
-      break;
-    } else {
-      break;
+      if (!tileIsOccupied(destination, boardstate)) {
+        possibleMoves.push(destination);
+      } else if (tileIsOccupiedByOppo(destination, boardstate, king.team)) {
+        possibleMoves.push(destination);
+        break;
+      } else {
+        break;
+      }
     }
   }
 
   return possibleMoves;
 };
 
-// In this method the enemy moves have already been calculated
 export const getCastlingMoves = (king, boardstate) => {
-  const possibleMoves = [];
+  if (king.hasMoved) return [];
 
-  if (king.hasMoved) return possibleMoves;
+  const possibleMoves = [];
 
   const rooks = boardstate.filter(
     (p) => p.isRook && p.team === king.team && !p.hasMoved
@@ -249,11 +94,13 @@ export const getCastlingMoves = (king, boardstate) => {
 
   for (const rook of rooks) {
     const direction = rook.position.x - king.position.x > 0 ? 1 : -1;
+    const adjacentX = king.position.x + direction;
 
-    const adjacentPosition = king.position.clone();
-    adjacentPosition.x += direction;
-
-    if (!rook.possibleMoves?.some((m) => m.samePosition(adjacentPosition)))
+    if (
+      !rook.possibleMoves?.some(
+        (m) => m.x === adjacentX && m.y === king.position.y
+      )
+    )
       continue;
 
     const conceringTiles = rook.possibleMoves.filter(
