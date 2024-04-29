@@ -1,5 +1,9 @@
+import { Position } from "../PieceModels/Position";
 import { getPossibleBishopMoves } from "./PiecesRules/BishopRules";
-import { getPossibleKingMoves } from "./PiecesRules/KingRules";
+import {
+  getCastlingMoves,
+  getPossibleKingMoves,
+} from "./PiecesRules/KingRules";
 import { getPossibleKnightMoves } from "./PiecesRules/KnightRules";
 import { getPossiblePawnMoves } from "./PiecesRules/PawnRules";
 import { getPossibleQueenMoves } from "./PiecesRules/QueenRules";
@@ -23,6 +27,16 @@ export class ChessBoard {
     for (const piece of this.pieces) {
       piece.possibleMoves = this.getValidMoves(piece, this.pieces);
     }
+
+    for (const king of this.pieces.filter((p) => p.isKing)) {
+      if (king.possibleMoves === undefined) continue;
+
+      king.possibleMoves = [
+        ...king.possibleMoves,
+        ...getCastlingMoves(king, this.pieces),
+      ];
+    }
+
     this.checkCurrentTeamMoves();
 
     for (const piece of this.pieces.filter(
@@ -154,6 +168,7 @@ export class ChessBoard {
           if (piece.isPawn) piece.enPassant = false;
           piece.position.x = destination.x;
           piece.position.y = destination.y;
+          piece.hasMoved = true;
           results.push(piece);
         } else if (
           !piece.samePosition(
@@ -180,6 +195,7 @@ export class ChessBoard {
               piece.type === "PAWN";
           piece.position.x = destination.x;
           piece.position.y = destination.y;
+          piece.hasMoved = true;
           results.push(piece);
         } else if (!piece.samePosition(destination)) {
           if (piece.isPawn) {

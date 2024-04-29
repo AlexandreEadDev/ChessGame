@@ -4,12 +4,13 @@ export class Piece {
   type;
   team;
   possibleMoves;
-
-  constructor(position, type, team, possibleMoves) {
+  hasMoved;
+  constructor(position, type, team, hasMoved, possibleMoves) {
     this.image = `assets/${team.toLowerCase()}-${type.toLowerCase()}.png`;
     this.position = position;
     this.type = type;
     this.team = team;
+    this.hasMoved = hasMoved;
     this.possibleMoves = possibleMoves;
   }
 
@@ -45,6 +46,7 @@ export class Piece {
       this.position.clone(),
       this.type,
       this.team,
+      this.hasMoved,
       this.possibleMoves?.map((m) => m.clone())
     );
   }

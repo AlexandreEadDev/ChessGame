@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import Board from "../ChessBoard/Board.jsx";
 import { initialBoard } from "../PieceModels/Constant.jsx";
-import { pawnMove } from "./PiecesRules/PawnRules.jsx";
-import { knightMove } from "./PiecesRules/KnightRules.jsx";
-import { bishopMove } from "./PiecesRules/BishopRules.jsx";
-import { rookMove } from "./PiecesRules/RookRules.jsx";
-import { queenMove } from "./PiecesRules/QueenRules.jsx";
-import { kingMove } from "./PiecesRules/KingRules.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 
 export default function Referee() {
@@ -42,7 +36,7 @@ export default function Referee() {
       playedPiece.team
     );
 
-    setBoard((previousBoard) => {
+    setBoard(() => {
       const clonedBoard = board.clone();
       clonedBoard.totalTurns += 1;
       playedMoveIsValid = clonedBoard.playMove(
@@ -100,7 +94,9 @@ export default function Referee() {
       const clonedBoard = board.clone();
       clonedBoard.pieces = clonedBoard.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(promotionPawn)) {
-          results.push(new Piece(piece.position.clone(), type, piece.team));
+          results.push(
+            new Piece(piece.position.clone(), type, piece.team, true)
+          );
         } else {
           results.push(piece);
         }
@@ -113,9 +109,13 @@ export default function Referee() {
     setPromotionOpen(false);
   }
 
+  const team = board.totalTurns % 2 !== 0 ? "White" : "Black";
+
   return (
     <>
-      <p className=" text-white text-2xl">{board.totalTurns}</p>
+      <p className=" text-white text-2xl">
+        {board.totalTurns} {team}
+      </p>
       {promotionOpen ? (
         <>
           <div
