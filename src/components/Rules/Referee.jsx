@@ -6,8 +6,16 @@ import { Piece } from "../PieceModels/Piece.jsx";
 export default function Referee() {
   const [board, setBoard] = useState(initialBoard.clone());
   const [promotionOpen, setPromotionOpen] = useState(false);
-  const [checkMateOpen, setcheckMateOpen] = useState(false);
+  const [checkMateOpen, setCheckMateOpen] = useState(false);
   const [promotionPawn, setPromotionPawn] = useState();
+  const [takenPieces, setTakenPieces] = useState([]);
+
+  const whiteTakenPieces = takenPieces.filter(
+    (piece) => piece.team === "WHITE"
+  );
+  const blackTakenPieces = takenPieces.filter(
+    (piece) => piece.team === "BLACK"
+  );
 
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
@@ -40,11 +48,12 @@ export default function Referee() {
         enPassantMove,
         validMove,
         playedPiece,
-        destination
+        destination,
+        setTakenPieces
       );
 
       if (clonedBoard.winningTeam !== undefined) {
-        setcheckMateOpen(true);
+        setCheckMateOpen(true);
       }
 
       return clonedBoard;
@@ -91,7 +100,7 @@ export default function Referee() {
     if (promotionPawn === undefined) {
       return;
     }
-    setBoard((previousBoard) => {
+    setBoard(() => {
       const clonedBoard = board.clone();
       clonedBoard.pieces = clonedBoard.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(promotionPawn)) {
@@ -111,17 +120,40 @@ export default function Referee() {
   }
 
   function restartGame() {
-    setcheckMateOpen(false);
+    setCheckMateOpen(false);
     setBoard(initialBoard.clone());
+  }
+
+  function renderTakenPiecesColumns(takenPieces) {
+    const columns = [];
+    const numPieces = takenPieces.length;
+
+    // Calculate the number of columns needed
+    const numColumns = Math.ceil(numPieces / 6);
+
+    // Render each column
+    for (let i = 0; i < numColumns; i++) {
+      const startIndex = i * 5;
+      const endIndex = Math.min(startIndex + 5, numPieces);
+
+      columns.push(
+        <ul key={i}>
+          {takenPieces.slice(startIndex, endIndex).map((piece, index) => (
+            <li className="" key={index}>
+              <img className="w-12" src={piece.image} alt={piece.type} />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    return columns;
   }
 
   const team = board.totalTurns % 2 !== 0 ? "White" : "Black";
 
   return (
     <>
-      <p className=" text-white text-2xl">
-        {board.totalTurns} {team}
-      </p>
       {promotionOpen ? (
         <>
           <div
@@ -190,11 +222,26 @@ export default function Referee() {
       ) : (
         <> </>
       )}
-      <Board
-        playMove={playMove}
-        pieces={board.pieces}
-        promotionOpen={promotionOpen}
-      />
+      <div className=" w-screen items-center justify-center gap-6 flex">
+        <div className=" flex flex-col gap-6">
+          <p className=" text-white text-2xl">
+            {board.totalTurns} {team}
+          </p>
+          <Board
+            playMove={playMove}
+            pieces={board.pieces}
+            promotionOpen={promotionOpen}
+          />
+        </div>
+        <div className="h-full mt-10 w-[50%] flex flex-col justify-between pt-8 pb-5">
+          <div className=" flex">
+            {renderTakenPiecesColumns(whiteTakenPieces)}
+          </div>
+          <div className=" flex">
+            {renderTakenPiecesColumns(blackTakenPieces)}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

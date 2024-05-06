@@ -135,34 +135,68 @@ export class ChessBoard {
     }
   }
 
-  playMove(enPassantMove, validMove, playedPiece, destination) {
+  playMove(enPassantMove, validMove, playedPiece, destination, setTakenPieces) {
     const pawnDirection = playedPiece.team === "WHITE" ? 1 : -1;
     const destinationPiece = this.pieces.find((p) =>
       p.samePosition(destination)
     );
+
     if (
       playedPiece.isKing &&
       destinationPiece?.isRook &&
       destinationPiece.team === playedPiece.team
     ) {
-      const direction =
-        destinationPiece.position.x - playedPiece.position.x > 0 ? 1 : -1;
-      const newKingXPosition = playedPiece.position.x + direction * 2;
-      this.pieces = this.pieces.map((p) => {
-        if (p.samePiecePosition(playedPiece)) {
-          p.position.x = newKingXPosition;
-        } else if (p.samePiecePosition(destinationPiece)) {
-          p.position.x = newKingXPosition - direction;
-        }
+      // Check if the move is a castling move
+      if (!validMove) {
+        this.pieces = this.pieces.map((p) => {
+          if (p.samePiecePosition(playedPiece)) {
+            p.position.x = destination.x;
+          } else if (!p.samePiecePosition(destinationPiece)) {
+            return p;
+          }
+          return p;
+        });
+        return true;
+      } else {
+        const direction =
+          destinationPiece.position.x - playedPiece.position.x > 0 ? 1 : -1;
+        const newKingXPosition = playedPiece.position.x + direction * 2;
+        this.pieces = this.pieces.map((p) => {
+          if (p.samePiecePosition(playedPiece)) {
+            p.position.x = newKingXPosition;
+          } else if (p.samePiecePosition(destinationPiece)) {
+            p.position.x = newKingXPosition - direction;
+          }
+          return p;
+        });
+      }
+    }
 
-        return p;
-      });
-
-      this.calculateAllMoves();
-      return true;
+    // Check if a piece is taken by the move and it's not a rook
+    if (destinationPiece && !destinationPiece.isRook) {
+      setTakenPieces((prevTakenPieces) => [
+        ...prevTakenPieces,
+        destinationPiece,
+      ]);
     }
 
     if (enPassantMove) {
+      const enPassantPawn = this.pieces.find(
+        (p) =>
+          p.isPawn &&
+          p.position.x === destination.x &&
+          p.position.y === destination.y - pawnDirection
+      );
+
+      // Add the en passant pawn to taken pieces
+      if (enPassantPawn) {
+        setTakenPieces((prevTakenPieces) => [
+          ...prevTakenPieces,
+          enPassantPawn,
+        ]);
+      }
+
+      // Update board state after en passant move
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
           if (piece.isPawn) piece.enPassant = false;
@@ -186,9 +220,10 @@ export class ChessBoard {
 
       this.calculateAllMoves();
     } else if (validMove) {
+      // Update board state after a regular move
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
-          //SPECIAL MOVE
+          // SPECIAL MOVE
           if (piece.isPawn)
             piece.enPassant =
               Math.abs(playedPiece.position.y - destination.y) === 2 &&

@@ -1,9 +1,14 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Tile from "./Tile.jsx";
 import {
   VERTICAL_AXIS,
   HORIZONTAL_AXIS,
-  GRID_SIZE,
+  GRID_SIZE_SM,
+  GRID_SIZE_LG,
+  GRID_SIZE_XL,
+  BOARD_SIZE_SM,
+  BOARD_SIZE_LG,
+  BOARD_SIZE_XL,
 } from "../PieceModels/Constant.jsx";
 import { Position } from "../PieceModels/Position.jsx";
 
@@ -12,6 +17,35 @@ function Board({ playMove, pieces, promotionOpen }) {
   const [grabPosition, setGrabPosition] = useState(new Position(-1, -1));
   const chessBoardRef = useRef(null);
   let board = [];
+  let GRID_SIZE = 0;
+  let BOARD_SIZE = 0;
+  const [screenSize, setScreenSize] = useState({
+    width: window.innerWidth,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenSize({
+        width: window.innerWidth,
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  if (screenSize.width < 640) {
+    GRID_SIZE = GRID_SIZE_SM;
+    BOARD_SIZE = BOARD_SIZE_SM;
+  } else if (screenSize.width > 640 && screenSize.width < 1024) {
+    GRID_SIZE = GRID_SIZE_LG;
+    BOARD_SIZE = BOARD_SIZE_LG;
+  } else {
+    GRID_SIZE = GRID_SIZE_XL;
+    BOARD_SIZE = BOARD_SIZE_XL;
+  }
 
   function grabPieces(e) {
     const chessBoard = chessBoardRef.current;
@@ -23,7 +57,7 @@ function Board({ playMove, pieces, promotionOpen }) {
     ) {
       const grabX = Math.floor((e.clientX - chessBoard.offsetLeft) / GRID_SIZE);
       const grabY = Math.abs(
-        Math.ceil((e.clientY - chessBoard.offsetTop - 600) / GRID_SIZE)
+        Math.ceil((e.clientY - chessBoard.offsetTop - BOARD_SIZE) / GRID_SIZE)
       );
       setGrabPosition(new Position(grabX, grabY));
 
@@ -72,9 +106,9 @@ function Board({ playMove, pieces, promotionOpen }) {
   function dropPieces(e) {
     const chessBoard = chessBoardRef.current;
     if (grabbedPiece && chessBoard) {
-      const x = Math.floor((e.clientX - chessBoard.offsetLeft) / 75);
+      const x = Math.floor((e.clientX - chessBoard.offsetLeft) / GRID_SIZE);
       const y = Math.abs(
-        Math.ceil((e.clientY - chessBoard.offsetTop - 600) / 75)
+        Math.ceil((e.clientY - chessBoard.offsetTop - BOARD_SIZE) / GRID_SIZE)
       );
 
       const currentPiece = pieces.find((p) => p.samePosition(grabPosition));
@@ -126,7 +160,7 @@ function Board({ playMove, pieces, promotionOpen }) {
         onMouseMove={(e) => movePieces(e)}
         onMouseDown={(e) => grabPieces(e)}
         onMouseUp={(e) => dropPieces(e)}
-        className=" bg-blue-800 w-[600px] h-[600px] grid grid-cols-8 grid-rows-8"
+        className=" bg-blue-800 lg:w-[600px]  lg:h-[600px] sm:w-[500px] sm:h-[500px] w-[400px] h-[400px] grid grid-cols-8 grid-rows-8"
         ref={chessBoardRef}
       >
         {board}

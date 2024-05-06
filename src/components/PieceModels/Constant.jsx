@@ -5,7 +5,12 @@ import { Position } from "./Position";
 
 export const VERTICAL_AXIS = ["1", "2", "3", "4", "5", "6", "7", "8"];
 export const HORIZONTAL_AXIS = ["a", "b", "c", "d", "e", "f", "g", "h"];
-export const GRID_SIZE = 75;
+export const GRID_SIZE_XL = 75;
+export const GRID_SIZE_LG = 62.5;
+export const GRID_SIZE_SM = 50;
+export const BOARD_SIZE_XL = 600;
+export const BOARD_SIZE_LG = 500;
+export const BOARD_SIZE_SM = 400;
 
 export const initialBoard = new ChessBoard(
   [
