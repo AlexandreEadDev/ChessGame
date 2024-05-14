@@ -8,18 +8,18 @@ function Tile({ number, image, highlight, promotionOpen }) {
   const highlightClass = highlight
     ? `before:bg-black/40 before:rounded-full before:w-4 before:h-4 before:inset-0 before:mx-auto before:my-auto relative ${
         image
-          ? "before:border-4 before:border-stone-900 before:bg-transparent before:rounded-full before:lg:w-[75px] before:lg:h-[75px] before:sm:w-[62.5px] before:sm:h-[62.5px]  before:w-[50px] before:h-[50px] before:absolute before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/4 before:transform before:opacity-70"
+          ? "before:border-4 before:border-stone-900 before:bg-transparent before:rounded-full before:lg:w-[75px] before:lg:h-[75px] before:sm:w-[56.25px] before:sm:h-[56.25px]  before:w-[37.5px] before:h-[37.5px] before:absolute before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/4 before:transform before:opacity-70"
           : ""
       }`
     : "";
 
   return (
     <div
-      className={`lg:w-[75px] lg:h-[75px] sm:w-[62.5px] sm:h-[62.5px] w-[50px] h-[50px] grid place-content-center ${tileColorClass} ${highlightClass}`}
+      className={`lg:w-[75px] lg:h-[75px] sm:w-[56.25px] sm:h-[56.25px] w-[37.5px] h-[37.5px] grid place-content-center ${tileColorClass} ${highlightClass}`}
     >
       {image && (
         <div
-          className={`chess-piece bg-no-repeat bg-center bg-cover lg:w-[70px] lg:h-[70px] sm:w-[58px] sm:h-[58px] w-[45px] h-[45px] z-10 ${grabClasses}`}
+          className={`chess-piece bg-no-repeat bg-center bg-cover lg:w-[70px] lg:h-[70px] sm:w-[54px] sm:h-[54px] w-[34px] h-[34px] z-10 ${grabClasses}`}
           style={{ backgroundImage: `url(${image})` }}
         ></div>
       )}

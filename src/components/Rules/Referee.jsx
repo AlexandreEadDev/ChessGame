@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Board from "../ChessBoard/Board.jsx";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 
@@ -10,6 +12,16 @@ export default function Referee() {
   const [promotionPawn, setPromotionPawn] = useState();
   const [takenPieces, setTakenPieces] = useState([]);
   const [halfMoveClock, setHalfMoveClock] = useState(0);
+  const [savedBoards, setSavedBoards] = useState([]);
+  const [boardName, setBoardName] = useState("");
+  const [showBoardNameInput, setShowBoardNameInput] = useState(false);
+
+  useEffect(() => {
+    const boardsFromLocalStorage = JSON.parse(
+      localStorage.getItem("savedChessBoards") || "[]"
+    );
+    setSavedBoards(boardsFromLocalStorage);
+  }, []);
 
   const whiteTakenPieces = takenPieces.filter(
     (piece) => piece.team === "WHITE"
@@ -155,7 +167,36 @@ export default function Referee() {
   };
 
   const fen = boardToFEN(board);
-  console.log(fen);
+
+  const saveToFENLocalStorage = () => {
+    if (savedBoards.length >= 9) {
+      // If there are already 9 saved boards, do not save another one
+      return;
+    }
+
+    if (!boardName) {
+      // If the board name is empty, show the input field
+      setShowBoardNameInput(true);
+      return;
+    }
+
+    const newBoard = { name: boardName, fen };
+    const newBoards = [...savedBoards, newBoard];
+
+    localStorage.setItem("savedChessBoards", JSON.stringify(newBoards));
+    setSavedBoards(newBoards);
+
+    // Clear the board name input and hide it
+    setBoardName("");
+    setShowBoardNameInput(false);
+  };
+  const deleteBoard = (indexToDelete) => {
+    const updatedBoards = savedBoards.filter(
+      (_, index) => index !== indexToDelete
+    );
+    localStorage.setItem("savedChessBoards", JSON.stringify(updatedBoards));
+    setSavedBoards(updatedBoards);
+  };
 
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
@@ -298,6 +339,27 @@ export default function Referee() {
 
   return (
     <>
+      {showBoardNameInput ? (
+        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-4 rounded">
+            <input
+              type="text"
+              placeholder="Enter board name"
+              value={boardName}
+              onChange={(e) => setBoardName(e.target.value)}
+              className="border rounded p-2 mr-2"
+            />
+            <button
+              onClick={saveToFENLocalStorage}
+              className="bg-[#9f4f32] hover:bg-[#9f4f32ae] text-[#ffdfba] font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
       {promotionOpen ? (
         <>
           <div
@@ -377,13 +439,38 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="h-full mt-10 lg:w-[50%] w-[20%] flex flex-col justify-between pt-8 pb-5">
+        <div className="h-full mt-10 lg:w-[20%] w-[20%] flex flex-col justify-between pt-8 pb-5">
           <div className=" flex">
             {renderTakenPiecesColumns(whiteTakenPieces)}
           </div>
           <div className=" flex">
             {renderTakenPiecesColumns(blackTakenPieces)}
           </div>
+        </div>
+
+        <div className=" flex flex-col justify-center gap-4 items-center">
+          <button
+            onClick={saveToFENLocalStorage}
+            className="bg-[#9f4f32] hover:bg-[#9f4f32ae] -mb-2 text-[#ffdfba] font-bold text-lg py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Save Board
+          </button>
+          <h2 className=" text-[#ffdfba] text-base">Saved Boards:</h2>
+          <ul>
+            {savedBoards.map((savedBoard, index) => (
+              <li className=" text-white" key={index}>
+                <div className=" flex items-center justify-center gap-2">
+                  {savedBoard.name}
+                  <button
+                    onClick={() => deleteBoard(index)}
+                    className="  flex items-center justify-center w-3 h-3 focus:outline-none focus:shadow-outline"
+                  >
+                    <FontAwesomeIcon className=" text-red-600" icon={faMinus} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </>

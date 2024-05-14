@@ -160,7 +160,7 @@ function Board({ playMove, pieces, promotionOpen }) {
         onMouseMove={(e) => movePieces(e)}
         onMouseDown={(e) => grabPieces(e)}
         onMouseUp={(e) => dropPieces(e)}
-        className=" bg-blue-800 lg:w-[600px]  lg:h-[600px] sm:w-[500px] sm:h-[500px] w-[400px] h-[400px] grid grid-cols-8 grid-rows-8"
+        className=" bg-blue-800 lg:w-[600px]  lg:h-[600px] sm:w-[450px] sm:h-[450px] w-[300px] h-[300px] grid grid-cols-8 grid-rows-8"
         ref={chessBoardRef}
       >
         {board}
