@@ -20,7 +20,11 @@ export class ChessBoard {
   }
 
   get currentTeam() {
-    return this.totalTurns % 2 === 0 ? "BLACK" : "WHITE";
+    if (!Number.isInteger(this.totalTurns)) {
+      return "BLACK";
+    } else {
+      return "WHITE";
+    }
   }
 
   calculateAllMoves() {
@@ -135,7 +139,14 @@ export class ChessBoard {
     }
   }
 
-  playMove(enPassantMove, validMove, playedPiece, destination, setTakenPieces) {
+  playMove(
+    enPassantMove,
+    validMove,
+    playedPiece,
+    destination,
+    setTakenPieces,
+    setHalfMoveClock
+  ) {
     const pawnDirection = playedPiece.team === "WHITE" ? 1 : -1;
     const destinationPiece = this.pieces.find((p) =>
       p.samePosition(destination)
@@ -173,11 +184,17 @@ export class ChessBoard {
     }
 
     // Check if a piece is taken by the move and it's not a rook
-    if (destinationPiece && !destinationPiece.isRook) {
+    if (destinationPiece && destinationPiece.team !== playedPiece.team) {
       setTakenPieces((prevTakenPieces) => [
         ...prevTakenPieces,
         destinationPiece,
       ]);
+    }
+
+    if (destinationPiece || playedPiece.isPawn) {
+      setHalfMoveClock(0);
+    } else {
+      setHalfMoveClock((prevHalfMoveClock) => prevHalfMoveClock + 1);
     }
 
     if (enPassantMove) {

@@ -9,6 +9,7 @@ export default function Referee() {
   const [checkMateOpen, setCheckMateOpen] = useState(false);
   const [promotionPawn, setPromotionPawn] = useState();
   const [takenPieces, setTakenPieces] = useState([]);
+  const [halfMoveClock, setHalfMoveClock] = useState(0);
 
   const whiteTakenPieces = takenPieces.filter(
     (piece) => piece.team === "WHITE"
@@ -17,13 +18,152 @@ export default function Referee() {
     (piece) => piece.team === "BLACK"
   );
 
+  const boardToFEN = (board) => {
+    let fen = "";
+    let emptyCount = 0;
+
+    for (let y = 7; y >= 0; y--) {
+      for (let x = 0; x < 8; x++) {
+        let piece = null;
+        for (let p of board.pieces) {
+          if (p.position.x === x && p.position.y === y) {
+            piece = p;
+            break;
+          }
+        }
+        if (piece) {
+          if (emptyCount > 0) {
+            fen += emptyCount;
+            emptyCount = 0;
+          }
+          fen +=
+            piece.team === "WHITE"
+              ? piece.type === "KNIGHT"
+                ? "N"
+                : piece.type.charAt(0)
+              : piece.type === "KNIGHT"
+              ? "n"
+              : piece.type.toLowerCase().charAt(0);
+        } else {
+          emptyCount++;
+        }
+      }
+      if (emptyCount > 0) {
+        fen += emptyCount;
+        emptyCount = 0;
+      }
+      if (y > 0) {
+        fen += "/";
+      }
+    }
+
+    fen += ` ${board.currentTeam === "WHITE" ? "w" : "b"} `;
+
+    // Castling availability
+    const castlingFlags = getCastlingFlags(board);
+    fen += `${castlingFlags.length === 0 ? "-" : castlingFlags.join("")}`;
+
+    // En passant target square
+    const enPassantTarget = getEnPassantTarget(board);
+    fen += ` ${enPassantTarget ? enPassantTarget : "-"} `;
+
+    // Half-move clock
+
+    fen += `${halfMoveClock} ${Math.floor(board.totalTurns)}`;
+    return fen;
+  };
+
+  const getCastlingFlags = (board) => {
+    const castlingFlags = [];
+
+    if (
+      board.pieces.some(
+        (piece) =>
+          piece.type === "KING" && piece.team === "WHITE" && !piece.hasMoved
+      )
+    ) {
+      if (
+        board.pieces.some(
+          (piece) =>
+            piece.type === "ROOK" &&
+            piece.team === "WHITE" &&
+            piece.position.x === 7 &&
+            !piece.hasMoved
+        )
+      ) {
+        castlingFlags.push("K");
+      }
+      if (
+        board.pieces.some(
+          (piece) =>
+            piece.type === "ROOK" &&
+            piece.team === "WHITE" &&
+            piece.position.x === 0 &&
+            !piece.hasMoved
+        )
+      ) {
+        castlingFlags.push("Q");
+      }
+    }
+
+    if (
+      board.pieces.some(
+        (piece) =>
+          piece.type === "KING" && piece.team === "BLACK" && !piece.hasMoved
+      )
+    ) {
+      if (
+        board.pieces.some(
+          (piece) =>
+            piece.type === "ROOK" &&
+            piece.team === "BLACK" &&
+            piece.position.x === 7 &&
+            !piece.hasMoved
+        )
+      ) {
+        castlingFlags.push("k");
+      }
+      if (
+        board.pieces.some(
+          (piece) =>
+            piece.type === "ROOK" &&
+            piece.team === "BLACK" &&
+            piece.position.x === 0 &&
+            !piece.hasMoved
+        )
+      ) {
+        castlingFlags.push("q");
+      }
+    }
+
+    return castlingFlags;
+  };
+
+  const getEnPassantTarget = (board) => {
+    const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+    for (let piece of board.pieces) {
+      if (piece.type === "PAWN" && piece.enPassant) {
+        // Determine the target square based on the direction of the pawn
+        const targetX = files[piece.position.x];
+        const targetY =
+          piece.team === "WHITE" ? piece.position.y - 1 : piece.position.y + 1;
+        return `${targetX}${targetY + 1}`;
+      }
+    }
+    return null;
+  };
+
+  const fen = boardToFEN(board);
+  console.log(fen);
+
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
 
     // Prevent the inactive team from playing
-    if (playedPiece.team === "WHITE" && board.totalTurns % 2 !== 1)
+    if (playedPiece.team === "WHITE" && !Number.isInteger(board.totalTurns))
       return false;
-    if (playedPiece.team === "BLACK" && board.totalTurns % 2 !== 0)
+    if (playedPiece.team === "BLACK" && Number.isInteger(board.totalTurns))
       return false;
 
     let playedMoveIsValid = false;
@@ -43,13 +183,14 @@ export default function Referee() {
 
     setBoard(() => {
       const clonedBoard = board.clone();
-      clonedBoard.totalTurns += 1;
+      clonedBoard.totalTurns += 0.5;
       playedMoveIsValid = clonedBoard.playMove(
         enPassantMove,
         validMove,
         playedPiece,
         destination,
-        setTakenPieces
+        setTakenPieces,
+        setHalfMoveClock
       );
 
       if (clonedBoard.winningTeam !== undefined) {
@@ -63,12 +204,14 @@ export default function Referee() {
 
     if (destination.y === promotionRow && playedPiece.isPawn) {
       setPromotionOpen(true);
-      setPromotionPawn((previousPromotionPawn) => {
+      setPromotionPawn(() => {
         const clonedPlayedPiece = playedPiece.clone();
         clonedPlayedPiece.position = destination.clone();
         return clonedPlayedPiece;
       });
     }
+
+    updateBoard(newBoard);
     return playedMoveIsValid;
   }
 
@@ -121,6 +264,7 @@ export default function Referee() {
 
   function restartGame() {
     setCheckMateOpen(false);
+    setTakenPieces([]);
     setBoard(initialBoard.clone());
   }
 
@@ -150,7 +294,7 @@ export default function Referee() {
     return columns;
   }
 
-  const team = board.totalTurns % 2 !== 0 ? "White" : "Black";
+  const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
   return (
     <>
@@ -225,7 +369,7 @@ export default function Referee() {
       <div className=" w-screen items-center justify-center gap-6 flex">
         <div className=" flex flex-col gap-6">
           <p className=" text-white text-2xl">
-            {board.totalTurns} {team}
+            {Math.floor(board.totalTurns)} {team}
           </p>
           <Board
             playMove={playMove}
@@ -233,7 +377,7 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="h-full mt-10 w-[50%] flex flex-col justify-between pt-8 pb-5">
+        <div className="h-full mt-10 lg:w-[50%] w-[20%] flex flex-col justify-between pt-8 pb-5">
           <div className=" flex">
             {renderTakenPiecesColumns(whiteTakenPieces)}
           </div>
