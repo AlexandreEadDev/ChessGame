@@ -191,7 +191,10 @@ export class ChessBoard {
       ]);
     }
 
-    if (destinationPiece || playedPiece.isPawn) {
+    if (
+      (destinationPiece && destinationPiece.team !== playedPiece.team) ||
+      playedPiece.isPawn
+    ) {
       setHalfMoveClock(0);
     } else {
       setHalfMoveClock((prevHalfMoveClock) => prevHalfMoveClock + 1);
