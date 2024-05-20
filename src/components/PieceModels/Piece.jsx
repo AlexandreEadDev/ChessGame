@@ -17,7 +17,6 @@ export class Piece {
   get isPawn() {
     return this.type === "PAWN";
   }
-
   get isRook() {
     return this.type === "ROOK";
   }
@@ -47,7 +46,7 @@ export class Piece {
       this.type,
       this.team,
       this.hasMoved,
-      this.possibleMoves?.map((m) => m.clone())
+      this.possibleMoves?.map((move) => move.clone())
     );
   }
 }

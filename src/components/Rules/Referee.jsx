@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
+import fenToBoard from "./FenToBoard.jsx";
 
 export default function Referee() {
   const [board, setBoard] = useState(initialBoard.clone());
@@ -15,20 +16,45 @@ export default function Referee() {
   const [savedBoards, setSavedBoards] = useState([]);
   const [boardName, setBoardName] = useState("");
   const [showBoardNameInput, setShowBoardNameInput] = useState(false);
+  const [latestTotalTurns, setLatestTotalTurns] = useState(0);
+  const [whiteTakenPieces, setWhiteTakenPieces] = useState([]);
+  const [blackTakenPieces, setBlackTakenPieces] = useState([]);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
       localStorage.getItem("savedChessBoards") || "[]"
     );
     setSavedBoards(boardsFromLocalStorage);
-  }, []);
 
-  const whiteTakenPieces = takenPieces.filter(
-    (piece) => piece.team === "WHITE"
-  );
-  const blackTakenPieces = takenPieces.filter(
-    (piece) => piece.team === "BLACK"
-  );
+    if (latestTotalTurns === 0) {
+      const maxTurns = boardsFromLocalStorage.reduce(
+        (maxTurns, savedBoard) =>
+          Math.max(maxTurns, savedBoard.totalTurns || 0),
+        0
+      );
+      setLatestTotalTurns(maxTurns);
+    }
+    const whitePieces = takenPieces.filter((piece) => piece.team === "WHITE");
+    const blackPieces = takenPieces.filter((piece) => piece.team === "BLACK");
+    setWhiteTakenPieces(whitePieces);
+    setBlackTakenPieces(blackPieces);
+  }, [latestTotalTurns, takenPieces]);
+
+  const handleSavedBoardClick = (fen, totalTurns) => {
+    const newBoard = fenToBoard(fen);
+    setBoard(newBoard);
+    setLatestTotalTurns(totalTurns);
+
+    const savedBoardsFromLocalStorage = JSON.parse(
+      localStorage.getItem("savedChessBoards") || "[]"
+    );
+    const savedBoard = savedBoardsFromLocalStorage.find(
+      (board) => board.fen === fen
+    );
+    if (savedBoard && savedBoard.takenPieces) {
+      setTakenPieces(savedBoard.takenPieces);
+    }
+  };
 
   const boardToFEN = (board) => {
     let fen = "";
@@ -71,82 +97,75 @@ export default function Referee() {
 
     fen += ` ${board.currentTeam === "WHITE" ? "w" : "b"} `;
 
-    // Castling availability
+    // Castling Handle
     const castlingFlags = getCastlingFlags(board);
     fen += `${castlingFlags.length === 0 ? "-" : castlingFlags.join("")}`;
 
-    // En passant target square
+    // En Passant Handle
     const enPassantTarget = getEnPassantTarget(board);
     fen += ` ${enPassantTarget ? enPassantTarget : "-"} `;
 
-    // Half-move clock
-
+    // Half Move Clock Handle
     fen += `${halfMoveClock} ${Math.floor(board.totalTurns)}`;
     return fen;
   };
 
   const getCastlingFlags = (board) => {
     const castlingFlags = [];
+    const castlingConditions = [
+      {
+        team: "WHITE",
+        kingX: 4,
+        kingFlag: "K",
+        queenFlag: "Q",
+        rookKingSideX: 7,
+        rookQueenSideX: 0,
+      },
+      {
+        team: "BLACK",
+        kingX: 4,
+        kingFlag: "k",
+        queenFlag: "q",
+        rookKingSideX: 7,
+        rookQueenSideX: 0,
+      },
+    ];
 
-    if (
-      board.pieces.some(
-        (piece) =>
-          piece.type === "KING" && piece.team === "WHITE" && !piece.hasMoved
-      )
-    ) {
-      if (
-        board.pieces.some(
+    castlingConditions.forEach(
+      ({ team, kingX, kingFlag, queenFlag, rookKingSideX, rookQueenSideX }) => {
+        const king = board.pieces.find(
           (piece) =>
-            piece.type === "ROOK" &&
-            piece.team === "WHITE" &&
-            piece.position.x === 7 &&
+            piece.type === "KING" &&
+            piece.team === team &&
+            piece.position.x === kingX &&
             !piece.hasMoved
-        )
-      ) {
-        castlingFlags.push("K");
+        );
+        if (king) {
+          if (
+            board.pieces.some(
+              (piece) =>
+                piece.type === "ROOK" &&
+                piece.team === team &&
+                piece.position.x === rookKingSideX &&
+                !piece.hasMoved
+            )
+          ) {
+            castlingFlags.push(kingFlag);
+          }
+          if (
+            board.pieces.some(
+              (piece) =>
+                piece.type === "ROOK" &&
+                piece.team === team &&
+                piece.position.x === rookQueenSideX &&
+                !piece.hasMoved
+            )
+          ) {
+            castlingFlags.push(queenFlag);
+          }
+        }
       }
-      if (
-        board.pieces.some(
-          (piece) =>
-            piece.type === "ROOK" &&
-            piece.team === "WHITE" &&
-            piece.position.x === 0 &&
-            !piece.hasMoved
-        )
-      ) {
-        castlingFlags.push("Q");
-      }
-    }
-
-    if (
-      board.pieces.some(
-        (piece) =>
-          piece.type === "KING" && piece.team === "BLACK" && !piece.hasMoved
-      )
-    ) {
-      if (
-        board.pieces.some(
-          (piece) =>
-            piece.type === "ROOK" &&
-            piece.team === "BLACK" &&
-            piece.position.x === 7 &&
-            !piece.hasMoved
-        )
-      ) {
-        castlingFlags.push("k");
-      }
-      if (
-        board.pieces.some(
-          (piece) =>
-            piece.type === "ROOK" &&
-            piece.team === "BLACK" &&
-            piece.position.x === 0 &&
-            !piece.hasMoved
-        )
-      ) {
-        castlingFlags.push("q");
-      }
-    }
+    );
 
     return castlingFlags;
   };
@@ -168,28 +187,31 @@ export default function Referee() {
 
   const fen = boardToFEN(board);
 
-  const saveToFENLocalStorage = () => {
+  const saveBoardToLocalStorage = () => {
     if (savedBoards.length >= 9) {
-      // If there are already 9 saved boards, do not save another one
       return;
     }
 
     if (!boardName) {
-      // If the board name is empty, show the input field
       setShowBoardNameInput(true);
       return;
     }
 
-    const newBoard = { name: boardName, fen };
+    const newBoard = {
+      name: boardName,
+      fen,
+      totalTurns: Math.floor(board.totalTurns),
+      takenPieces: takenPieces,
+    };
     const newBoards = [...savedBoards, newBoard];
 
     localStorage.setItem("savedChessBoards", JSON.stringify(newBoards));
     setSavedBoards(newBoards);
 
-    // Clear the board name input and hide it
     setBoardName("");
     setShowBoardNameInput(false);
   };
+
   const deleteBoard = (indexToDelete) => {
     const updatedBoards = savedBoards.filter(
       (_, index) => index !== indexToDelete
@@ -201,7 +223,6 @@ export default function Referee() {
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
 
-    // Prevent the inactive team from playing
     if (playedPiece.team === "WHITE" && !Number.isInteger(board.totalTurns))
       return false;
     if (playedPiece.team === "BLACK" && Number.isInteger(board.totalTurns))
@@ -251,8 +272,6 @@ export default function Referee() {
         return clonedPlayedPiece;
       });
     }
-
-    updateBoard(newBoard);
     return playedMoveIsValid;
   }
 
@@ -313,10 +332,8 @@ export default function Referee() {
     const columns = [];
     const numPieces = takenPieces.length;
 
-    // Calculate the number of columns needed
     const numColumns = Math.ceil(numPieces / 6);
 
-    // Render each column
     for (let i = 0; i < numColumns; i++) {
       const startIndex = i * 5;
       const endIndex = Math.min(startIndex + 5, numPieces);
@@ -350,7 +367,7 @@ export default function Referee() {
               className="border rounded p-2 mr-2"
             />
             <button
-              onClick={saveToFENLocalStorage}
+              onClick={saveBoardToLocalStorage}
               className="bg-[#9f4f32] hover:bg-[#9f4f32ae] text-[#ffdfba] font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
               Save
@@ -450,7 +467,7 @@ export default function Referee() {
 
         <div className=" flex flex-col justify-center gap-4 items-center">
           <button
-            onClick={saveToFENLocalStorage}
+            onClick={saveBoardToLocalStorage}
             className="bg-[#9f4f32] hover:bg-[#9f4f32ae] -mb-2 text-[#ffdfba] font-bold text-lg py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Save Board
@@ -459,8 +476,14 @@ export default function Referee() {
           <ul>
             {savedBoards.map((savedBoard, index) => (
               <li className=" text-white" key={index}>
+                {/* Add onClick event to handle board selection */}
                 <div className=" flex items-center justify-center gap-2">
-                  {savedBoard.name}
+                  <div
+                    className=" flex items-center justify-center gap-2 cursor-pointer"
+                    onClick={() => handleSavedBoardClick(savedBoard.fen)}
+                  >
+                    {savedBoard.name}
+                  </div>
                   <button
                     onClick={() => deleteBoard(index)}
                     className="  flex items-center justify-center w-3 h-3 focus:outline-none focus:shadow-outline"
