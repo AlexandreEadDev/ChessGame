@@ -20,11 +20,7 @@ export class ChessBoard {
   }
 
   get currentTeam() {
-    if (!Number.isInteger(this.totalTurns)) {
-      return "BLACK";
-    } else {
-      return "WHITE";
-    }
+    return Number.isInteger(this.totalTurns) ? "WHITE" : "BLACK";
   }
 
   calculateAllMoves() {
@@ -67,29 +63,30 @@ export class ChessBoard {
     )) {
       if (piece.possibleMoves === undefined) continue;
 
-      for (const move of piece.possibleMoves) {
-        const simulatedChessBoard = this.clone();
-
-        simulatedChessBoard.pieces = simulatedChessBoard.pieces.filter(
+      piece.possibleMoves = piece.possibleMoves.filter((move) => {
+        const simulatedBoard = this.clone();
+        simulatedBoard.pieces = simulatedBoard.pieces.filter(
           (p) => !p.samePosition(move)
         );
 
-        const clonedPiece = simulatedChessBoard.pieces.find((p) =>
+        const clonedPiece = simulatedBoard.pieces.find((p) =>
           p.samePiecePosition(piece)
         );
-        if (!clonedPiece) continue;
-        clonedPiece.position = move.clone();
-        const clonedKing = simulatedChessBoard.pieces.find(
-          (p) => p.isKing && p.team === simulatedChessBoard.currentTeam
-        );
-        if (!clonedKing) continue;
+        if (!clonedPiece) return false;
 
-        for (const enemy of simulatedChessBoard.pieces.filter(
-          (p) => p.team !== simulatedChessBoard.currentTeam
+        clonedPiece.position = move.clone();
+
+        const clonedKing = simulatedBoard.pieces.find(
+          (p) => p.isKing && p.team === simulatedBoard.currentTeam
+        );
+        if (!clonedKing) return false;
+
+        for (const enemy of simulatedBoard.pieces.filter(
+          (p) => p.team !== simulatedBoard.currentTeam
         )) {
-          enemy.possibleMoves = simulatedChessBoard.getValidMoves(
+          enemy.possibleMoves = simulatedBoard.getValidMoves(
             enemy,
-            simulatedChessBoard.pieces
+            simulatedBoard.pieces
           );
 
           if (enemy.isPawn) {
@@ -100,9 +97,7 @@ export class ChessBoard {
                   m.samePosition(clonedKing.position)
               )
             ) {
-              piece.possibleMoves = piece.possibleMoves?.filter(
-                (m) => !m.samePosition(move)
-              );
+              return false;
             }
           } else {
             if (
@@ -110,13 +105,13 @@ export class ChessBoard {
                 m.samePosition(clonedKing.position)
               )
             ) {
-              piece.possibleMoves = piece.possibleMoves?.filter(
-                (m) => !m.samePosition(move)
-              );
+              return false;
             }
           }
         }
-      }
+
+        return true;
+      });
     }
   }
 
@@ -157,7 +152,6 @@ export class ChessBoard {
       destinationPiece?.isRook &&
       destinationPiece.team === playedPiece.team
     ) {
-      // Check if the move is a castling move
       if (!validMove) {
         this.pieces = this.pieces.map((p) => {
           if (p.samePiecePosition(playedPiece)) {
@@ -183,7 +177,6 @@ export class ChessBoard {
       }
     }
 
-    // Check if a piece is taken by the move and it's not a rook
     if (destinationPiece && destinationPiece.team !== playedPiece.team) {
       setTakenPieces((prevTakenPieces) => [
         ...prevTakenPieces,
@@ -208,7 +201,6 @@ export class ChessBoard {
           p.position.y === destination.y - pawnDirection
       );
 
-      // Add the en passant pawn to taken pieces
       if (enPassantPawn) {
         setTakenPieces((prevTakenPieces) => [
           ...prevTakenPieces,
@@ -216,7 +208,6 @@ export class ChessBoard {
         ]);
       }
 
-      // Update board state after en passant move
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
           if (piece.isPawn) piece.enPassant = false;
@@ -240,7 +231,6 @@ export class ChessBoard {
 
       this.calculateAllMoves();
     } else if (validMove) {
-      // Update board state after a regular move
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
           // SPECIAL MOVE

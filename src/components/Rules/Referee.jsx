@@ -5,6 +5,7 @@ import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 import fenToBoard from "./FenToBoard.jsx";
+import axios from "axios";
 
 export default function Referee() {
   const [board, setBoard] = useState(initialBoard.clone());
@@ -16,9 +17,14 @@ export default function Referee() {
   const [savedBoards, setSavedBoards] = useState([]);
   const [boardName, setBoardName] = useState("");
   const [showBoardNameInput, setShowBoardNameInput] = useState(false);
-  const [latestTotalTurns, setLatestTotalTurns] = useState(0);
   const [whiteTakenPieces, setWhiteTakenPieces] = useState([]);
   const [blackTakenPieces, setBlackTakenPieces] = useState([]);
+  const [prediction, setPrediction] = useState({
+    evaluation: 0,
+    bestMove: "e2e4",
+  });
+  const [level, setLevel] = useState(1);
+  const [botIsActivate, setBotIsActivate] = useState(false);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -26,24 +32,15 @@ export default function Referee() {
     );
     setSavedBoards(boardsFromLocalStorage);
 
-    if (latestTotalTurns === 0) {
-      const maxTurns = boardsFromLocalStorage.reduce(
-        (maxTurns, savedBoard) =>
-          Math.max(maxTurns, savedBoard.totalTurns || 0),
-        0
-      );
-      setLatestTotalTurns(maxTurns);
-    }
     const whitePieces = takenPieces.filter((piece) => piece.team === "WHITE");
     const blackPieces = takenPieces.filter((piece) => piece.team === "BLACK");
     setWhiteTakenPieces(whitePieces);
     setBlackTakenPieces(blackPieces);
-  }, [latestTotalTurns, takenPieces]);
+  }, [takenPieces]);
 
-  const handleSavedBoardClick = (fen, totalTurns) => {
+  const handleSavedBoardClick = (fen) => {
     const newBoard = fenToBoard(fen);
     setBoard(newBoard);
-    setLatestTotalTurns(totalTurns);
 
     const savedBoardsFromLocalStorage = JSON.parse(
       localStorage.getItem("savedChessBoards") || "[]"
@@ -51,9 +48,17 @@ export default function Referee() {
     const savedBoard = savedBoardsFromLocalStorage.find(
       (board) => board.fen === fen
     );
-    if (savedBoard && savedBoard.takenPieces) {
+    if (savedBoard) {
       setTakenPieces(savedBoard.takenPieces);
+      setHalfMoveClock(savedBoard.halfMoveClock);
+      setBoard((prevBoard) => {
+        const updatedBoard = prevBoard.clone();
+        updatedBoard.totalTurns = savedBoard.totalTurns;
+        updatedBoard.calculateAllMoves();
+        return updatedBoard;
+      });
     }
+    evaluatePosition(fen);
   };
 
   const boardToFEN = (board) => {
@@ -200,8 +205,9 @@ export default function Referee() {
     const newBoard = {
       name: boardName,
       fen,
-      totalTurns: Math.floor(board.totalTurns),
+      halfMoveClock,
       takenPieces: takenPieces,
+      totalTurns: board.totalTurns,
     };
     const newBoards = [...savedBoards, newBoard];
 
@@ -218,6 +224,22 @@ export default function Referee() {
     );
     localStorage.setItem("savedChessBoards", JSON.stringify(updatedBoards));
     setSavedBoards(updatedBoards);
+  };
+
+  const evaluatePosition = async (fen) => {
+    try {
+      const response = await axios.post("http://192.168.1.16:5000/evaluate", {
+        fen,
+        level,
+      });
+      const data = response.data;
+      setPrediction({
+        evaluation: data.evaluation,
+        bestMove: data.best_move,
+      });
+    } catch (error) {
+      console.error("Error evaluating position:", error);
+    }
   };
 
   function playMove(playedPiece, destination) {
@@ -258,6 +280,11 @@ export default function Referee() {
       if (clonedBoard.winningTeam !== undefined) {
         setCheckMateOpen(true);
       }
+
+      // Generate the FEN for the updated board
+      const updatedFEN = boardToFEN(clonedBoard);
+
+      evaluatePosition(updatedFEN);
 
       return clonedBoard;
     });
@@ -322,12 +349,6 @@ export default function Referee() {
     setPromotionOpen(false);
   }
 
-  function restartGame() {
-    setCheckMateOpen(false);
-    setTakenPieces([]);
-    setBoard(initialBoard.clone());
-  }
-
   function renderTakenPiecesColumns(takenPieces) {
     const columns = [];
     const numPieces = takenPieces.length;
@@ -351,6 +372,25 @@ export default function Referee() {
 
     return columns;
   }
+
+  function restartGame() {
+    setCheckMateOpen(false);
+    setTakenPieces([]);
+    setBoard(initialBoard.clone());
+    setPrediction(null);
+  }
+
+  const handleChangeLevel = (e) => {
+    const selectedLevel = parseInt(e.target.value);
+    setLevel(selectedLevel);
+  };
+  const handleBotActivate = () => {
+    if (botIsActivate) {
+      setBotIsActivate(false);
+    } else {
+      setBotIsActivate(true);
+    }
+  };
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
@@ -456,7 +496,7 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="h-full mt-10 lg:w-[20%] w-[20%] flex flex-col justify-between pt-8 pb-5">
+        <div className="h-full mt-10 lg:w-[20%] w-[20%] flex flex-col justify-between pt-8 pb-5 max-w-[144px]">
           <div className=" flex">
             {renderTakenPiecesColumns(whiteTakenPieces)}
           </div>
@@ -464,7 +504,6 @@ export default function Referee() {
             {renderTakenPiecesColumns(blackTakenPieces)}
           </div>
         </div>
-
         <div className=" flex flex-col justify-center gap-4 items-center">
           <button
             onClick={saveBoardToLocalStorage}
@@ -494,6 +533,23 @@ export default function Referee() {
               </li>
             ))}
           </ul>
+        </div>
+        <div className=" flex items-center flex-col text-[#ffdfba]">
+          <div className=" flex justify-center items-center gap-4">
+            Activate Bot: <input type="checkbox" onChange={handleBotActivate} />
+          </div>
+          <div className=" text-xl ">
+            Select Level Bot:{" "}
+            <input
+              className=" bg-transparent w-6"
+              type="number"
+              max={3}
+              value={level}
+              onChange={handleChangeLevel}
+            />
+          </div>
+          <div>Evaluate Position : {prediction?.evaluation}</div>
+          <div>Best Next Move : {prediction?.bestMove}</div>
         </div>
       </div>
     </>
