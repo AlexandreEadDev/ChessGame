@@ -6,6 +6,7 @@ import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 import fenToBoard from "./FenToBoard.jsx";
 import axios from "axios";
+import { Position } from "../PieceModels/Position.jsx";
 
 export default function Referee() {
   const [board, setBoard] = useState(initialBoard.clone());
@@ -25,6 +26,10 @@ export default function Referee() {
   });
   const [level, setLevel] = useState(1);
   const [botIsActivate, setBotIsActivate] = useState(false);
+  const [botCheckbox, setBotCheckbox] = useState(false);
+  const [botTurn, setBotTurn] = useState(false);
+  const [predictedMove, setPredictedMove] = useState(null);
+  const [turnDelay, setTurnDelay] = useState(1000);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -37,6 +42,18 @@ export default function Referee() {
     setWhiteTakenPieces(whitePieces);
     setBlackTakenPieces(blackPieces);
   }, [takenPieces]);
+
+  const handleBotTurn = async () => {
+    if (!botTurn) return;
+
+    await playBotMove(prediction.bestMove);
+
+    setBotTurn(false);
+  };
+
+  useEffect(() => {
+    handleBotTurn();
+  }, [botTurn]);
 
   const handleSavedBoardClick = (fen) => {
     const newBoard = fenToBoard(fen);
@@ -180,7 +197,6 @@ export default function Referee() {
 
     for (let piece of board.pieces) {
       if (piece.type === "PAWN" && piece.enPassant) {
-        // Determine the target square based on the direction of the pawn
         const targetX = files[piece.position.x];
         const targetY =
           piece.team === "WHITE" ? piece.position.y - 1 : piece.position.y + 1;
@@ -237,10 +253,43 @@ export default function Referee() {
         evaluation: data.evaluation,
         bestMove: data.best_move,
       });
+      setPredictedMove(data.best_move);
     } catch (error) {
       console.error("Error evaluating position:", error);
     }
   };
+
+  const playBotMove = async () => {
+    if (!predictedMove) return;
+
+    const initPosition = new Position(
+      predictedMove.charCodeAt(0) - 97,
+      parseInt(predictedMove[1]) - 1
+    );
+
+    const nextPosition = new Position(
+      predictedMove.charCodeAt(2) - 97,
+      parseInt(predictedMove[3]) - 1
+    );
+
+    const pieceToMove = board.pieces.find((piece) =>
+      piece.position.samePosition(initPosition)
+    );
+
+    if (pieceToMove) {
+      setTimeout(async () => {
+        playMove(pieceToMove, nextPosition);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setPredictedMove(null);
+      }, turnDelay);
+    } else {
+      console.error("Piece not found at initial position:", initPosition);
+    }
+  };
+
+  useEffect(() => {
+    playBotMove();
+  }, [predictedMove]);
 
   function playMove(playedPiece, destination) {
     if (playedPiece.possibleMoves === undefined) return false;
@@ -280,8 +329,6 @@ export default function Referee() {
       if (clonedBoard.winningTeam !== undefined) {
         setCheckMateOpen(true);
       }
-
-      // Generate the FEN for the updated board
       const updatedFEN = boardToFEN(clonedBoard);
 
       evaluatePosition(updatedFEN);
@@ -292,12 +339,17 @@ export default function Referee() {
     let promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
 
     if (destination.y === promotionRow && playedPiece.isPawn) {
-      setPromotionOpen(true);
-      setPromotionPawn(() => {
-        const clonedPlayedPiece = playedPiece.clone();
-        clonedPlayedPiece.position = destination.clone();
-        return clonedPlayedPiece;
-      });
+      if (botIsActivate) {
+        setPromotionOpen(false);
+        choosePromotion("QUEEN");
+      } else {
+        setPromotionOpen(true);
+        setPromotionPawn(() => {
+          const clonedPlayedPiece = playedPiece.clone();
+          clonedPlayedPiece.position = destination.clone();
+          return clonedPlayedPiece;
+        });
+      }
     }
     return playedMoveIsValid;
   }
@@ -377,19 +429,22 @@ export default function Referee() {
     setCheckMateOpen(false);
     setTakenPieces([]);
     setBoard(initialBoard.clone());
-    setPrediction(null);
+    setPrediction({
+      evaluation: 0,
+      bestMove: "e2e4",
+    });
+    setBotIsActivate(false);
+    setBotCheckbox(false);
   }
 
   const handleChangeLevel = (e) => {
     const selectedLevel = parseInt(e.target.value);
     setLevel(selectedLevel);
   };
-  const handleBotActivate = () => {
-    if (botIsActivate) {
-      setBotIsActivate(false);
-    } else {
-      setBotIsActivate(true);
-    }
+  const handleBotCheckboxChange = (event) => {
+    const isChecked = event.target.checked;
+    setBotIsActivate(isChecked);
+    setBotCheckbox(isChecked);
   };
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
@@ -536,7 +591,13 @@ export default function Referee() {
         </div>
         <div className=" flex items-center flex-col text-[#ffdfba]">
           <div className=" flex justify-center items-center gap-4">
-            Activate Bot: <input type="checkbox" onChange={handleBotActivate} />
+            <label htmlFor="botCheckbox">Activate Bot</label>
+            <input
+              type="checkbox"
+              onChange={handleBotCheckboxChange}
+              checked={botCheckbox}
+              id="botCheckbox"
+            />
           </div>
           <div className=" text-xl ">
             Select Level Bot:{" "}
