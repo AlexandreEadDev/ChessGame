@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Board from "../ChessBoard/Board.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus } from "@fortawesome/free-solid-svg-icons";
+import { faL, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 import fenToBoard from "./FenToBoard.jsx";
@@ -29,7 +29,7 @@ export default function Referee() {
   const [botCheckbox, setBotCheckbox] = useState(false);
   const [botTurn, setBotTurn] = useState(false);
   const [predictedMove, setPredictedMove] = useState(null);
-  const [turnDelay, setTurnDelay] = useState(1000);
+  const [turnDelay, setTurnDelay] = useState(1);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -259,7 +259,19 @@ export default function Referee() {
     }
   };
 
+  function isElementAtPosition(board, x, y) {
+    for (let piece of board.pieces) {
+      if (piece.position.x === x && piece.position.y === y) {
+        return { type: piece.type, team: piece.team };
+      }
+    }
+    return { type: "Empty", team: "None" };
+  }
+
   const playBotMove = async () => {
+    const isElementPresentE1 = isElementAtPosition(board, 4, 0);
+    const isElementPresentE8 = isElementAtPosition(board, 4, 7);
+
     if (!predictedMove) return;
 
     const initPosition = new Position(
@@ -272,18 +284,36 @@ export default function Referee() {
       parseInt(predictedMove[3]) - 1
     );
 
+    let modifiedMove = predictedMove;
+
+    if (
+      isElementPresentE1.type === "KING" &&
+      isElementPresentE1.team === "WHITE" &&
+      (predictedMove === "e1c1" || predictedMove === "e1g1")
+    ) {
+      modifiedMove = predictedMove === "e1c1" ? "e1a1" : "e1h1";
+      setPredictedMove(modifiedMove);
+    }
+
+    if (
+      isElementPresentE8.type === "KING" &&
+      isElementPresentE8.team === "BLACK" &&
+      (predictedMove === "e8c8" || predictedMove === "e8g8")
+    ) {
+      modifiedMove = predictedMove === "e8c8" ? "e8a8" : "e8h8";
+      setPredictedMove(modifiedMove);
+    }
+
     const pieceToMove = board.pieces.find((piece) =>
       piece.position.samePosition(initPosition)
     );
 
-    if (pieceToMove) {
+    if (pieceToMove && botIsActivate) {
       setTimeout(async () => {
         playMove(pieceToMove, nextPosition);
         await new Promise((resolve) => setTimeout(resolve, 500));
         setPredictedMove(null);
       }, turnDelay);
-    } else {
-      console.error("Piece not found at initial position:", initPosition);
     }
   };
 
@@ -341,7 +371,6 @@ export default function Referee() {
     if (destination.y === promotionRow && playedPiece.isPawn) {
       if (botIsActivate) {
         setPromotionOpen(false);
-        choosePromotion("QUEEN");
       } else {
         setPromotionOpen(true);
         setPromotionPawn(() => {
@@ -351,6 +380,7 @@ export default function Referee() {
         });
       }
     }
+
     return playedMoveIsValid;
   }
 
