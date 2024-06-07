@@ -497,15 +497,11 @@ export default function Referee() {
     }
   };
 
-  console.log(level);
-
   const handleBotCheckboxChange = (event) => {
     const isChecked = event.target.checked;
     setBotIsActivate(isChecked);
     setBotCheckbox(isChecked);
   };
-
-  console.log(fen);
 
   return (
     <>
