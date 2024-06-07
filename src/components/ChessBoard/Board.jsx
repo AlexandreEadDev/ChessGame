@@ -142,6 +142,9 @@ function Board({ playMove, pieces, promotionOpen }) {
           )
         : false;
 
+      const isBottomRow = j === 0;
+      const isLeftColumn = i === 0;
+
       board.push(
         <Tile
           key={`${j},${i}`}
@@ -149,6 +152,8 @@ function Board({ playMove, pieces, promotionOpen }) {
           number={number}
           highlight={highlight}
           promotionOpen={promotionOpen}
+          bottomLabel={isBottomRow ? HORIZONTAL_AXIS[i] : null}
+          leftLabel={isLeftColumn ? VERTICAL_AXIS[j] : null}
         />
       );
     }

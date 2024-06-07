@@ -1,6 +1,13 @@
 import React from "react";
 
-function Tile({ number, image, highlight, promotionOpen }) {
+function Tile({
+  number,
+  image,
+  highlight,
+  promotionOpen,
+  bottomLabel,
+  leftLabel,
+}) {
   const grabClasses = promotionOpen
     ? ""
     : "hover:cursor-grab active:cursor-grabbing";
@@ -23,6 +30,18 @@ function Tile({ number, image, highlight, promotionOpen }) {
           style={{ backgroundImage: `url(${image})` }}
         ></div>
       )}
+      <div className="lg:w-[75px] lg:h-[75px] sm:w-[56.25px] sm:h-[56.25px] w-[37.5px] h-[37.5px] absolute">
+        {bottomLabel && (
+          <div className="absolute bottom-[0.5px] -mb-[0.5px] right-[0.5px] text-xs text-black">
+            {bottomLabel}
+          </div>
+        )}
+        {leftLabel && (
+          <div className="absolute top-[0.5px] left-[0.5px] text-xs text-black">
+            {leftLabel}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

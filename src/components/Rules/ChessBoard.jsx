@@ -1,3 +1,4 @@
+import { Piece } from "../PieceModels/Piece";
 import { Position } from "../PieceModels/Position";
 import { getPossibleBishopMoves } from "./PiecesRules/BishopRules";
 import {
@@ -140,12 +141,47 @@ export class ChessBoard {
     playedPiece,
     destination,
     setTakenPieces,
-    setHalfMoveClock
+    setHalfMoveClock,
+    botIsActivate
   ) {
     const pawnDirection = playedPiece.team === "WHITE" ? 1 : -1;
     const destinationPiece = this.pieces.find((p) =>
       p.samePosition(destination)
     );
+
+    if (
+      (playedPiece.isPawn &&
+        playedPiece.team === "WHITE" &&
+        destination.y === 7) ||
+      (playedPiece.team === "BLACK" && destination.y === 0)
+    ) {
+      if (botIsActivate) {
+        // Remove the pawn and push the new queen piece
+        this.pieces = this.pieces.reduce((results, piece) => {
+          if (piece.samePiecePosition(playedPiece)) {
+            // Create a new queen piece in the same position
+            const queenPiece = new Piece(
+              piece.position.clone(), // Correctly pass position
+              "QUEEN",
+              piece.team,
+              true, // hasMoved
+              piece.possibleMoves // Keep possible moves
+            );
+            results.push(queenPiece);
+            console.log(
+              "there is a promotion. Pawn change into default option that is QUEEN"
+            );
+          } else if (!piece.samePosition(destination)) {
+            if (piece.isPawn) {
+              piece.enPassant = false;
+            }
+
+            results.push(piece);
+          }
+          return results;
+        }, []);
+      }
+    }
 
     if (
       playedPiece.isKing &&

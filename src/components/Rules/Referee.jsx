@@ -29,7 +29,10 @@ export default function Referee() {
   const [botCheckbox, setBotCheckbox] = useState(false);
   const [botTurn, setBotTurn] = useState(false);
   const [predictedMove, setPredictedMove] = useState(null);
-  const [turnDelay, setTurnDelay] = useState(1);
+  const [turnDelay, setTurnDelay] = useState(1000);
+  const [selectedLevel, setSelectedLevel] = useState(1);
+
+  const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -44,7 +47,7 @@ export default function Referee() {
   }, [takenPieces]);
 
   const handleBotTurn = async () => {
-    if (!botTurn) return;
+    if (!botTurn || board.currentTeam !== "BLACK") return; // Ensure the bot only plays for black
 
     await playBotMove(prediction.bestMove);
 
@@ -54,6 +57,12 @@ export default function Referee() {
   useEffect(() => {
     handleBotTurn();
   }, [botTurn]);
+
+  useEffect(() => {
+    if (botIsActivate && board.currentTeam === "BLACK") {
+      setBotTurn(true);
+    }
+  }, [board.currentTeam, botIsActivate]);
 
   const handleSavedBoardClick = (fen) => {
     const newBoard = fenToBoard(fen);
@@ -244,10 +253,11 @@ export default function Referee() {
 
   const evaluatePosition = async (fen) => {
     try {
-      const response = await axios.post("http://192.168.1.16:5000/evaluate", {
+      const response = await axios.post("http://85.215.170.9:5000/evaluate", {
         fen,
         level,
       });
+
       const data = response.data;
       setPrediction({
         evaluation: data.evaluation,
@@ -269,10 +279,7 @@ export default function Referee() {
   }
 
   const playBotMove = async () => {
-    const isElementPresentE1 = isElementAtPosition(board, 4, 0);
-    const isElementPresentE8 = isElementAtPosition(board, 4, 7);
-
-    if (!predictedMove) return;
+    if (!predictedMove || board.currentTeam !== "BLACK") return; // Ensure bot move only for black team
 
     const initPosition = new Position(
       predictedMove.charCodeAt(0) - 97,
@@ -285,6 +292,9 @@ export default function Referee() {
     );
 
     let modifiedMove = predictedMove;
+
+    const isElementPresentE1 = isElementAtPosition(board, 4, 0);
+    const isElementPresentE8 = isElementAtPosition(board, 4, 7);
 
     if (
       isElementPresentE1.type === "KING" &&
@@ -308,11 +318,12 @@ export default function Referee() {
       piece.position.samePosition(initPosition)
     );
 
-    if (pieceToMove && botIsActivate) {
+    if (pieceToMove && botIsActivate && !promotionOpen) {
       setTimeout(async () => {
         playMove(pieceToMove, nextPosition);
         await new Promise((resolve) => setTimeout(resolve, 500));
         setPredictedMove(null);
+        setBotTurn(false); // Ensure the bot turn is reset after the move
       }, turnDelay);
     }
   };
@@ -353,7 +364,8 @@ export default function Referee() {
         playedPiece,
         destination,
         setTakenPieces,
-        setHalfMoveClock
+        setHalfMoveClock,
+        botIsActivate
       );
 
       if (clonedBoard.winningTeam !== undefined) {
@@ -370,7 +382,7 @@ export default function Referee() {
 
     if (destination.y === promotionRow && playedPiece.isPawn) {
       if (botIsActivate) {
-        setPromotionOpen(false);
+        return;
       } else {
         setPromotionOpen(true);
         setPromotionPawn(() => {
@@ -380,7 +392,6 @@ export default function Referee() {
         });
       }
     }
-
     return playedMoveIsValid;
   }
 
@@ -412,6 +423,7 @@ export default function Referee() {
     if (promotionPawn === undefined) {
       return;
     }
+
     setBoard(() => {
       const clonedBoard = board.clone();
       clonedBoard.pieces = clonedBoard.pieces.reduce((results, piece) => {
@@ -467,21 +479,37 @@ export default function Referee() {
     setBotCheckbox(false);
   }
 
+  useEffect(() => {
+    if (board.currentTeam === "WHITE") {
+      setLevel(3); // Set level to 3 when bot is not activated and it's white's turn
+    } else {
+      setLevel(selectedLevel); // Set level to the selected level when bot is activated or it's not white's turn
+    }
+    evaluatePosition(fen);
+  }, [botIsActivate, board.currentTeam, selectedLevel, fen]);
+
   const handleChangeLevel = (e) => {
-    const selectedLevel = parseInt(e.target.value);
-    setLevel(selectedLevel);
+    const newLevel = parseInt(e.target.value);
+    setSelectedLevel(newLevel); // Update the selected level state
+    // If bot is activated or it's not white's turn, set the level immediately
+    if (botIsActivate || board.currentTeam !== "WHITE") {
+      setLevel(newLevel);
+    }
   };
+
+  console.log(level);
+
   const handleBotCheckboxChange = (event) => {
     const isChecked = event.target.checked;
     setBotIsActivate(isChecked);
     setBotCheckbox(isChecked);
   };
 
-  const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
+  console.log(fen);
 
   return (
     <>
-      {showBoardNameInput ? (
+      {showBoardNameInput && (
         <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-4 rounded">
             <input
@@ -499,10 +527,8 @@ export default function Referee() {
             </button>
           </div>
         </div>
-      ) : (
-        <></>
       )}
-      {promotionOpen ? (
+      {promotionOpen && (
         <>
           <div
             className={`flex justify-around items-center absolute h-[300px] w-[600px] top-[calc(50%-150px)] left-[calc(50%-300px)] z-50 ${
@@ -547,10 +573,8 @@ export default function Referee() {
             />
           </div>
         </>
-      ) : (
-        <> </>
       )}
-      {checkMateOpen ? (
+      {checkMateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-8 max-w-md">
             <div className="flex items-center justify-center flex-col">
@@ -567,8 +591,6 @@ export default function Referee() {
             </div>
           </div>
         </div>
-      ) : (
-        <> </>
       )}
       <div className=" w-screen items-center justify-center gap-6 flex">
         <div className=" flex flex-col gap-6">
@@ -633,11 +655,13 @@ export default function Referee() {
             Select Level Bot:{" "}
             <input
               className=" bg-transparent w-6"
-              type="number"
+              type="range"
+              min={1}
               max={3}
-              value={level}
+              value={selectedLevel}
               onChange={handleChangeLevel}
             />
+            {selectedLevel}
           </div>
           <div>Evaluate Position : {prediction?.evaluation}</div>
           <div>Best Next Move : {prediction?.bestMove}</div>

@@ -6,3 +6,12 @@
   font-family: "Poppins", sans-serif;
   overflow: hidden;
 }
+::selection {
+  color: none;
+  background: none;
+}
+/* For Mozilla Firefox */
+::-moz-selection {
+  color: none;
+  background: none;
+}
