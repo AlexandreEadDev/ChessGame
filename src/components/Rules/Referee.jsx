@@ -253,10 +253,13 @@ export default function Referee() {
 
   const evaluatePosition = async (fen) => {
     try {
-      const response = await axios.post("http://85.215.170.9:5000/evaluate", {
-        fen,
-        level,
-      });
+      const response = await axios.post(
+        "https://evaluatepositionfromfen.fr:5000/evaluate",
+        {
+          fen,
+          level,
+        }
+      );
 
       const data = response.data;
       setPrediction({
@@ -479,22 +482,9 @@ export default function Referee() {
     setBotCheckbox(false);
   }
 
-  useEffect(() => {
-    if (board.currentTeam === "WHITE") {
-      setLevel(3); // Set level to 3 when bot is not activated and it's white's turn
-    } else {
-      setLevel(selectedLevel); // Set level to the selected level when bot is activated or it's not white's turn
-    }
-    evaluatePosition(fen);
-  }, [botIsActivate, board.currentTeam, selectedLevel, fen]);
-
   const handleChangeLevel = (e) => {
     const newLevel = parseInt(e.target.value);
-    setSelectedLevel(newLevel); // Update the selected level state
-    // If bot is activated or it's not white's turn, set the level immediately
-    if (botIsActivate || board.currentTeam !== "WHITE") {
-      setLevel(newLevel);
-    }
+    setLevel(newLevel);
   };
 
   const handleBotCheckboxChange = (event) => {
@@ -654,10 +644,10 @@ export default function Referee() {
               type="range"
               min={1}
               max={3}
-              value={selectedLevel}
+              value={level}
               onChange={handleChangeLevel}
             />
-            {selectedLevel}
+            {level}
           </div>
           <div>Evaluate Position : {prediction?.evaluation}</div>
           <div>Best Next Move : {prediction?.bestMove}</div>
