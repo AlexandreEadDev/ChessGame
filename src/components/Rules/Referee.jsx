@@ -23,6 +23,7 @@ export default function Referee() {
   const [prediction, setPrediction] = useState({
     evaluation: 0,
     bestMove: "e2e4",
+    moveToPlay: "e2e4",
   });
   const [level, setLevel] = useState(1);
   const [botIsActivate, setBotIsActivate] = useState(false);
@@ -30,9 +31,10 @@ export default function Referee() {
   const [botTurn, setBotTurn] = useState(false);
   const [predictedMove, setPredictedMove] = useState(null);
   const [turnDelay, setTurnDelay] = useState(1000);
-  const [selectedLevel, setSelectedLevel] = useState(1);
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
+
+  console.log(predictedMove, prediction.bestMove);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -49,7 +51,7 @@ export default function Referee() {
   const handleBotTurn = async () => {
     if (!botTurn || board.currentTeam !== "BLACK") return; // Ensure the bot only plays for black
 
-    await playBotMove(prediction.bestMove);
+    await playBotMove(prediction.moveToPlay);
 
     setBotTurn(false);
   };
@@ -253,20 +255,18 @@ export default function Referee() {
 
   const evaluatePosition = async (fen) => {
     try {
-      const response = await axios.post(
-        "https://evaluatepositionfromfen.fr:5000/evaluate",
-        {
-          fen,
-          level,
-        }
-      );
+      const response = await axios.post("http://127.0.0.1:5000/evaluate", {
+        fen,
+        level,
+      });
 
       const data = response.data;
       setPrediction({
         evaluation: data.evaluation,
         bestMove: data.best_move,
+        moveToPlay: data.move_to_play,
       });
-      setPredictedMove(data.best_move);
+      setPredictedMove(data.move_to_play);
     } catch (error) {
       console.error("Error evaluating position:", error);
     }
@@ -477,6 +477,7 @@ export default function Referee() {
     setPrediction({
       evaluation: 0,
       bestMove: "e2e4",
+      moveToPlay: "e2e4",
     });
     setBotIsActivate(false);
     setBotCheckbox(false);
