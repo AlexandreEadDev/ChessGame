@@ -255,10 +255,13 @@ export default function Referee() {
 
   const evaluatePosition = async (fen) => {
     try {
-      const response = await axios.post("http://127.0.0.1:5000/evaluate", {
-        fen,
-        level,
-      });
+      const response = await axios.post(
+        "https://evaluatepositionfromfen.fr:5000/evaluate",
+        {
+          fen,
+          level,
+        }
+      );
 
       const data = response.data;
       setPrediction({
