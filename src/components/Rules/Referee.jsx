@@ -256,7 +256,7 @@ export default function Referee() {
   const evaluatePosition = async (fen) => {
     try {
       const response = await axios.post(
-        "https://evaluatepositionfromfen.fr:5000/evaluate",
+        "https://evaluatechesspositionfromfen.xyz/evaluate",
         {
           fen,
           level,
