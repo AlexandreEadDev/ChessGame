@@ -253,15 +253,12 @@ export default function Referee() {
     setSavedBoards(updatedBoards);
   };
 
-  console.log(fen, level);
   const evaluatePosition = async (fen) => {
     try {
       const response = await axios.post(
         "https://evaluatechesspositionfromfen.xyz/evaluate",
-        {
-          fen,
-          level,
-        }
+        { fen, level },
+        { timeout: 5000 } // Set a timeout to catch issues with slow responses
       );
 
       const data = response.data;
@@ -272,7 +269,11 @@ export default function Referee() {
       });
       setPredictedMove(data.move_to_play);
     } catch (error) {
-      console.error("Error evaluating position:", error);
+      console.error(
+        "Error evaluating position:",
+        error.message,
+        error.response
+      );
     }
   };
 
