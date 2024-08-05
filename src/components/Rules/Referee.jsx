@@ -253,6 +253,7 @@ export default function Referee() {
     setSavedBoards(updatedBoards);
   };
 
+  console.log(fen, level);
   const evaluatePosition = async (fen) => {
     try {
       const response = await axios.post(
