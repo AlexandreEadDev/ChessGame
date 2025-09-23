@@ -6,7 +6,7 @@ export class Piece {
   possibleMoves;
   hasMoved;
   constructor(position, type, team, hasMoved, possibleMoves) {
-    this.image = `assets/${team.toLowerCase()}-${type.toLowerCase()}.png`;
+    this.image = `${team.toLowerCase()}-${type.toLowerCase()}.png`;
     this.position = position;
     this.type = type;
     this.team = team;
@@ -38,6 +38,12 @@ export class Piece {
   }
   samePosition(otherPosition) {
     return this.position.samePosition(otherPosition);
+  }
+
+  cloneAt(position) {
+    const newPiece = this.clone();
+    newPiece.position = position;
+    return newPiece;
   }
 
   clone() {

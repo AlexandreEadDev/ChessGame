@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import Board from "../ChessBoard/Board.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faL, faMinus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faMinus,
+  faSave,
+  faCog,
+  faListAlt,
+} from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
 import fenToBoard from "./FenToBoard.jsx";
@@ -31,10 +36,10 @@ export default function Referee() {
   const [botTurn, setBotTurn] = useState(false);
   const [predictedMove, setPredictedMove] = useState(null);
   const [turnDelay, setTurnDelay] = useState(1000);
+  const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
-
-  console.log(predictedMove, prediction.bestMove);
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -49,7 +54,7 @@ export default function Referee() {
   }, [takenPieces]);
 
   const handleBotTurn = async () => {
-    if (!botTurn || board.currentTeam !== "BLACK") return; // Ensure the bot only plays for black
+    if (!botTurn || board.currentTeam !== "BLACK") return;
 
     await playBotMove(prediction.moveToPlay);
 
@@ -87,6 +92,7 @@ export default function Referee() {
       });
     }
     evaluatePosition(fen);
+    setShowSavedGamesModal(false);
   };
 
   const boardToFEN = (board) => {
@@ -95,26 +101,18 @@ export default function Referee() {
 
     for (let y = 7; y >= 0; y--) {
       for (let x = 0; x < 8; x++) {
-        let piece = null;
-        for (let p of board.pieces) {
-          if (p.position.x === x && p.position.y === y) {
-            piece = p;
-            break;
-          }
-        }
+        const piece = board.pieces.find(
+          (p) => p.position.x === x && p.position.y === y
+        );
         if (piece) {
           if (emptyCount > 0) {
             fen += emptyCount;
             emptyCount = 0;
           }
+          let char = piece.type.charAt(0);
+          if (piece.isKnight) char = "N";
           fen +=
-            piece.team === "WHITE"
-              ? piece.type === "KNIGHT"
-                ? "N"
-                : piece.type.charAt(0)
-              : piece.type === "KNIGHT"
-              ? "n"
-              : piece.type.toLowerCase().charAt(0);
+            piece.team === "WHITE" ? char.toUpperCase() : char.toLowerCase();
         } else {
           emptyCount++;
         }
@@ -123,107 +121,59 @@ export default function Referee() {
         fen += emptyCount;
         emptyCount = 0;
       }
-      if (y > 0) {
-        fen += "/";
-      }
+      if (y > 0) fen += "/";
     }
 
-    fen += ` ${board.currentTeam === "WHITE" ? "w" : "b"} `;
-
-    // Castling Handle
+    fen += ` ${board.currentTeam === "WHITE" ? "w" : "b"}`;
     const castlingFlags = getCastlingFlags(board);
-    fen += `${castlingFlags.length === 0 ? "-" : castlingFlags.join("")}`;
-
-    // En Passant Handle
+    fen += ` ${castlingFlags.length === 0 ? "-" : castlingFlags.join("")}`;
     const enPassantTarget = getEnPassantTarget(board);
-    fen += ` ${enPassantTarget ? enPassantTarget : "-"} `;
-
-    // Half Move Clock Handle
-    fen += `${halfMoveClock} ${Math.floor(board.totalTurns)}`;
+    fen += ` ${enPassantTarget}`;
+    fen += ` ${halfMoveClock} ${Math.floor(board.totalTurns)}`;
     return fen;
   };
 
   const getCastlingFlags = (board) => {
-    const castlingFlags = [];
-    const castlingConditions = [
-      {
-        team: "WHITE",
-        kingX: 4,
-        kingFlag: "K",
-        queenFlag: "Q",
-        rookKingSideX: 7,
-        rookQueenSideX: 0,
-      },
-      {
-        team: "BLACK",
-        kingX: 4,
-        kingFlag: "k",
-        queenFlag: "q",
-        rookKingSideX: 7,
-        rookQueenSideX: 0,
-      },
-    ];
+    const flags = [];
+    const sides = { K: 7, Q: 0, k: 7, q: 0 };
+    const teams = { WHITE: ["K", "Q"], BLACK: ["k", "q"] };
 
-    castlingConditions.forEach(
-      ({ team, kingX, kingFlag, queenFlag, rookKingSideX, rookQueenSideX }) => {
-        const king = board.pieces.find(
-          (piece) =>
-            piece.type === "KING" &&
-            piece.team === team &&
-            piece.position.x === kingX &&
-            !piece.hasMoved
-        );
-        if (king) {
-          if (
-            board.pieces.some(
-              (piece) =>
-                piece.type === "ROOK" &&
-                piece.team === team &&
-                piece.position.x === rookKingSideX &&
-                !piece.hasMoved
-            )
-          ) {
-            castlingFlags.push(kingFlag);
-          }
-          if (
-            board.pieces.some(
-              (piece) =>
-                piece.type === "ROOK" &&
-                piece.team === team &&
-                piece.position.x === rookQueenSideX &&
-                !piece.hasMoved
-            )
-          ) {
-            castlingFlags.push(queenFlag);
-          }
+    for (const team of Object.keys(teams)) {
+      const king = board.pieces.find(
+        (p) => p.isKing && p.team === team && !p.hasMoved
+      );
+      if (king) {
+        for (const flag of teams[team]) {
+          const rook = board.pieces.find(
+            (p) =>
+              p.isRook &&
+              p.team === team &&
+              p.position.x === sides[flag] &&
+              !p.hasMoved
+          );
+          if (rook) flags.push(flag);
         }
       }
-    );
-
-    return castlingFlags;
+    }
+    return flags; // **FIX**: Return the array directly, not a string
   };
 
   const getEnPassantTarget = (board) => {
-    const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
-
-    for (let piece of board.pieces) {
-      if (piece.type === "PAWN" && piece.enPassant) {
-        const targetX = files[piece.position.x];
-        const targetY =
-          piece.team === "WHITE" ? piece.position.y - 1 : piece.position.y + 1;
-        return `${targetX}${targetY + 1}`;
-      }
+    const files = "abcdefgh";
+    const pawn = board.pieces.find((p) => p.isPawn && p.enPassant);
+    if (pawn) {
+      const rank = pawn.team === "WHITE" ? 3 : 6;
+      return `${files[pawn.position.x]}${rank}`;
     }
-    return null;
+    return "-";
   };
+
+  // ... (le reste du fichier est identique)
 
   const fen = boardToFEN(board);
 
   const saveBoardToLocalStorage = () => {
-    if (savedBoards.length >= 9) {
-      return;
-    }
-
+    if (savedBoards.length >= 9) return;
     if (!boardName) {
       setShowBoardNameInput(true);
       return;
@@ -258,9 +208,8 @@ export default function Referee() {
       const response = await axios.post(
         "https://evaluatechesspositionfromfen.xyz/evaluate",
         { fen, level },
-        { timeout: 5000 } // Set a timeout to catch issues with slow responses
+        { timeout: 5000 }
       );
-
       const data = response.data;
       setPrediction({
         evaluation: data.evaluation,
@@ -269,69 +218,40 @@ export default function Referee() {
       });
       setPredictedMove(data.move_to_play);
     } catch (error) {
-      console.error(
-        "Error evaluating position:",
-        error.message,
-        error.response
-      );
+      console.error("Error evaluating position:", error.message);
     }
   };
 
   function isElementAtPosition(board, x, y) {
-    for (let piece of board.pieces) {
-      if (piece.position.x === x && piece.position.y === y) {
-        return { type: piece.type, team: piece.team };
-      }
-    }
-    return { type: "Empty", team: "None" };
+    const piece = board.pieces.find(
+      (p) => p.position.x === x && p.position.y === y
+    );
+    return piece
+      ? { type: piece.type, team: piece.team }
+      : { type: "Empty", team: "None" };
   }
 
   const playBotMove = async () => {
-    if (!predictedMove || board.currentTeam !== "BLACK") return; // Ensure bot move only for black team
+    if (!predictedMove || board.currentTeam !== "BLACK") return;
 
-    const initPosition = new Position(
+    const initPos = new Position(
       predictedMove.charCodeAt(0) - 97,
       parseInt(predictedMove[1]) - 1
     );
-
-    const nextPosition = new Position(
+    const nextPos = new Position(
       predictedMove.charCodeAt(2) - 97,
       parseInt(predictedMove[3]) - 1
     );
 
-    let modifiedMove = predictedMove;
-
-    const isElementPresentE1 = isElementAtPosition(board, 4, 0);
-    const isElementPresentE8 = isElementAtPosition(board, 4, 7);
-
-    if (
-      isElementPresentE1.type === "KING" &&
-      isElementPresentE1.team === "WHITE" &&
-      (predictedMove === "e1c1" || predictedMove === "e1g1")
-    ) {
-      modifiedMove = predictedMove === "e1c1" ? "e1a1" : "e1h1";
-      setPredictedMove(modifiedMove);
-    }
-
-    if (
-      isElementPresentE8.type === "KING" &&
-      isElementPresentE8.team === "BLACK" &&
-      (predictedMove === "e8c8" || predictedMove === "e8g8")
-    ) {
-      modifiedMove = predictedMove === "e8c8" ? "e8a8" : "e8h8";
-      setPredictedMove(modifiedMove);
-    }
-
-    const pieceToMove = board.pieces.find((piece) =>
-      piece.position.samePosition(initPosition)
+    const pieceToMove = board.pieces.find((p) =>
+      p.position.samePosition(initPos)
     );
 
     if (pieceToMove && botIsActivate && !promotionOpen) {
-      setTimeout(async () => {
-        playMove(pieceToMove, nextPosition);
-        await new Promise((resolve) => setTimeout(resolve, 500));
+      setTimeout(() => {
+        playMove(pieceToMove, nextPos);
         setPredictedMove(null);
-        setBotTurn(false); // Ensure the bot turn is reset after the move
+        setBotTurn(false);
       }, turnDelay);
     }
   };
@@ -341,19 +261,15 @@ export default function Referee() {
   }, [predictedMove]);
 
   function playMove(playedPiece, destination) {
-    if (playedPiece.possibleMoves === undefined) return false;
-
-    if (playedPiece.team === "WHITE" && !Number.isInteger(board.totalTurns))
+    if (
+      playedPiece.possibleMoves === undefined ||
+      playedPiece.team !== board.currentTeam
+    )
       return false;
-    if (playedPiece.team === "BLACK" && Number.isInteger(board.totalTurns))
-      return false;
 
-    let playedMoveIsValid = false;
-
-    const validMove = playedPiece.possibleMoves?.some((m) =>
+    const validMove = playedPiece.possibleMoves.some((m) =>
       m.samePosition(destination)
     );
-
     if (!validMove) return false;
 
     const enPassantMove = isEnPassantMove(
@@ -363,8 +279,9 @@ export default function Referee() {
       playedPiece.team
     );
 
-    setBoard(() => {
-      const clonedBoard = board.clone();
+    let playedMoveIsValid = false;
+    setBoard((prevBoard) => {
+      const clonedBoard = prevBoard.clone();
       clonedBoard.totalTurns += 0.5;
       playedMoveIsValid = clonedBoard.playMove(
         enPassantMove,
@@ -376,133 +293,73 @@ export default function Referee() {
         botIsActivate
       );
 
-      if (clonedBoard.winningTeam !== undefined) {
-        setCheckMateOpen(true);
-      }
-      const updatedFEN = boardToFEN(clonedBoard);
+      if (clonedBoard.winningTeam) setCheckMateOpen(true);
 
-      evaluatePosition(updatedFEN);
-
+      evaluatePosition(boardToFEN(clonedBoard));
       return clonedBoard;
     });
 
-    let promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
-
-    if (destination.y === promotionRow && playedPiece.isPawn) {
-      if (botIsActivate) {
-        return;
-      } else {
+    const promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
+    if (playedPiece.isPawn && destination.y === promotionRow) {
+      if (!botIsActivate) {
         setPromotionOpen(true);
-        setPromotionPawn(() => {
-          const clonedPlayedPiece = playedPiece.clone();
-          clonedPlayedPiece.position = destination.clone();
-          return clonedPlayedPiece;
-        });
+        setPromotionPawn(playedPiece.cloneAt(destination));
       }
     }
     return playedMoveIsValid;
   }
 
-  function isEnPassantMove(prevPosition, nextPosition, type, team) {
-    const pawnDirection = team === "WHITE" ? 1 : -1;
-    if (type === "PAWN") {
-      if (
-        (nextPosition.x - prevPosition.x === -1 ||
-          nextPosition.x - prevPosition.x === 1) &&
-        nextPosition.y - prevPosition.y === pawnDirection
-      ) {
-        const piece = board.pieces.find(
-          (p) =>
-            p.position.x === nextPosition.x &&
-            p.position.y === nextPosition.y - pawnDirection &&
-            p.isPawn &&
-            p.enPassant &&
-            p.team !== team
-        );
-        if (piece) {
-          return true;
-        }
-      }
-    }
-    return false;
+  function isEnPassantMove(prev, next, type, team) {
+    const pawnDir = team === "WHITE" ? 1 : -1;
+    return (
+      type === "PAWN" &&
+      Math.abs(next.x - prev.x) === 1 &&
+      next.y - prev.y === pawnDir &&
+      !board.pieces.some((p) => p.samePosition(next))
+    );
   }
 
   function choosePromotion(type) {
-    if (promotionPawn === undefined) {
-      return;
-    }
-
-    setBoard(() => {
-      const clonedBoard = board.clone();
-      clonedBoard.pieces = clonedBoard.pieces.reduce((results, piece) => {
-        if (piece.samePiecePosition(promotionPawn)) {
-          results.push(
-            new Piece(piece.position.clone(), type, piece.team, true)
-          );
-        } else {
-          results.push(piece);
-        }
-        return results;
-      }, []);
+    if (!promotionPawn) return;
+    setBoard((prevBoard) => {
+      const clonedBoard = prevBoard.clone();
+      const newPieces = clonedBoard.pieces.filter(
+        (p) => !p.samePiecePosition(promotionPawn)
+      );
+      newPieces.push(
+        new Piece(promotionPawn.position, type, promotionPawn.team, true)
+      );
+      clonedBoard.pieces = newPieces;
       clonedBoard.calculateAllMoves();
-
       return clonedBoard;
     });
     setPromotionOpen(false);
   }
 
-  function renderTakenPiecesColumns(takenPieces) {
-    const columns = [];
-    const numPieces = takenPieces.length;
-
-    const numColumns = Math.ceil(numPieces / 6);
-
-    for (let i = 0; i < numColumns; i++) {
-      const startIndex = i * 5;
-      const endIndex = Math.min(startIndex + 5, numPieces);
-
-      columns.push(
-        <ul key={i}>
-          {takenPieces.slice(startIndex, endIndex).map((piece, index) => (
-            <li className="" key={index}>
-              <img className="w-12" src={piece.image} alt={piece.type} />
-            </li>
-          ))}
-        </ul>
-      );
-    }
-
-    return columns;
+  function renderTakenPieces(pieces) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {pieces.map((p, i) => (
+          <img key={i} className="w-6 h-6" src={p.image} alt={p.type} />
+        ))}
+      </div>
+    );
   }
 
   function restartGame() {
     setCheckMateOpen(false);
     setTakenPieces([]);
     setBoard(initialBoard.clone());
-    setPrediction({
-      evaluation: 0,
-      bestMove: "e2e4",
-      moveToPlay: "e2e4",
-    });
+    setPrediction({ evaluation: 0, bestMove: "e2e4", moveToPlay: "e2e4" });
     setBotIsActivate(false);
     setBotCheckbox(false);
   }
 
-  const handleChangeLevel = (e) => {
-    const newLevel = parseInt(e.target.value);
-    setLevel(newLevel);
-  };
-
-  const handleBotCheckboxChange = (event) => {
-    const isChecked = event.target.checked;
-    setBotIsActivate(isChecked);
-    setBotCheckbox(isChecked);
-  };
-
   return (
     <>
+      {/* --- MODALS --- */}
       {showBoardNameInput && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white p-4 rounded">
             <input
               type="text"
@@ -513,7 +370,7 @@ export default function Referee() {
             />
             <button
               onClick={saveBoardToLocalStorage}
-              className="bg-[#9f4f32] hover:bg-[#9f4f32ae] text-[#ffdfba] font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="bg-[#9f4f32] hover:bg-[#9f4f32ae] text-white font-bold py-2 px-4 rounded"
             >
               Save
             </button>
@@ -521,62 +378,38 @@ export default function Referee() {
         </div>
       )}
       {promotionOpen && (
-        <>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div
-            className={`flex justify-around items-center absolute h-[300px] w-[600px] top-[calc(50%-150px)] left-[calc(50%-300px)] z-50 ${
+            className={`flex justify-around items-center p-4 rounded ${
               promotionPawn?.team === "WHITE" ? "bg-black/80" : "bg-white/80"
             }`}
           >
-            <img
-              onClick={() => choosePromotion("ROOK")}
-              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
-                promotionPawn?.team === "WHITE"
-                  ? "hover:bg-white/50"
-                  : "hover:bg-black/50"
-              }`}
-              src={`assets/${promotionPawn?.team.toLowerCase()}-rook.png`}
-            />
-            <img
-              onClick={() => choosePromotion("BISHOP")}
-              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
-                promotionPawn?.team === "WHITE"
-                  ? "hover:bg-white/50"
-                  : "hover:bg-black/50"
-              }`}
-              src={`assets/${promotionPawn?.team.toLowerCase()}-bishop.png`}
-            />
-            <img
-              onClick={() => choosePromotion("KNIGHT")}
-              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
-                promotionPawn?.team === "WHITE"
-                  ? "hover:bg-white/50"
-                  : "hover:bg-black/50"
-              }`}
-              src={`assets/${promotionPawn?.team.toLowerCase()}-knight.png`}
-            />
-            <img
-              onClick={() => choosePromotion("QUEEN")}
-              className={`h-28 rounded-full hover:cursor-pointer p-2 select-none ${
-                promotionPawn?.team === "WHITE"
-                  ? "hover:bg-white/50"
-                  : "hover:bg-black/50"
-              }`}
-              src={`assets/${promotionPawn?.team.toLowerCase()}-queen.png`}
-            />
+            {["ROOK", "BISHOP", "KNIGHT", "QUEEN"].map((type) => (
+              <img
+                key={type}
+                onClick={() => choosePromotion(type)}
+                className={`h-24 w-24 rounded-full hover:cursor-pointer p-2 select-none ${
+                  promotionPawn?.team === "WHITE"
+                    ? "hover:bg-white/50"
+                    : "hover:bg-black/50"
+                }`}
+                src={`${promotionPawn?.team.toLowerCase()}-${type.toLowerCase()}.png`}
+                alt={type}
+              />
+            ))}
           </div>
-        </>
+        </div>
       )}
       {checkMateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-8 max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg p-8">
             <div className="flex items-center justify-center flex-col">
               <span className="block mb-4">
-                The winning team is{" "}
-                {(board.winningTeam === team) === "WHITE" ? "white" : "black"}!
+                The winning team is {board.winningTeam}!
               </span>
               <button
                 onClick={restartGame}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
               >
                 Play again
               </button>
@@ -584,79 +417,214 @@ export default function Referee() {
           </div>
         </div>
       )}
-      <div className=" w-screen items-center justify-center gap-6 flex">
-        <div className=" flex flex-col gap-6">
-          <p className=" text-white text-2xl">
+      {showSavedGamesModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center lg:hidden">
+          <div className="bg-gray-800 p-6 rounded-lg text-white w-11/12 max-w-sm">
+            <h2 className="text-[#ffdfba] text-lg mb-4">Saved Boards:</h2>
+            <ul className="max-h-64 overflow-y-auto">
+              {savedBoards.map((savedBoard, index) => (
+                <li className="text-white mb-2" key={index}>
+                  <div className="flex items-center justify-between">
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => handleSavedBoardClick(savedBoard.fen)}
+                    >
+                      {savedBoard.name}
+                    </div>
+                    <button
+                      onClick={() => deleteBoard(index)}
+                      className="w-5 h-5"
+                    >
+                      <FontAwesomeIcon
+                        className="text-red-600"
+                        icon={faMinus}
+                      />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => setShowSavedGamesModal(false)}
+              className="mt-4 bg-red-600 text-white py-2 px-4 rounded w-full"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center lg:hidden">
+          <div className="bg-gray-800 p-6 rounded-lg text-white w-11/12 max-w-sm">
+            <div className="flex flex-col items-center gap-4 text-[#ffdfba]">
+              <div className="flex items-center gap-4">
+                <label htmlFor="botCheckbox">Activate Bot</label>
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    setBotIsActivate(e.target.checked);
+                    setBotCheckbox(e.target.checked);
+                  }}
+                  checked={botCheckbox}
+                  id="botCheckbox"
+                />
+              </div>
+              <div className="text-xl">
+                Level:{" "}
+                <input
+                  className="bg-transparent w-24 align-middle"
+                  type="range"
+                  min={1}
+                  max={3}
+                  value={level}
+                  onChange={(e) => setLevel(parseInt(e.target.value))}
+                />{" "}
+                {level}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSettingsModal(false)}
+              className="mt-4 bg-red-600 text-white py-2 px-4 rounded w-full"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- MOBILE LAYOUT --- */}
+      <div className="flex flex-col h-screen w-screen bg-gray-800 text-white lg:hidden">
+        <div className="bg-black/30 p-2 text-center text-sm font-mono">
+          Evaluation: {prediction?.evaluation}
+        </div>
+        <div className="w-full">
+          <Board
+            playMove={playMove}
+            pieces={board.pieces}
+            board={board}
+            promotionOpen={promotionOpen}
+          />
+        </div>
+        <div className="flex-grow p-2 flex flex-col justify-around bg-gray-900">
+          <div className="flex justify-between items-center">
+            <span className="text-sm">Black taken:</span>
+            {renderTakenPieces(blackTakenPieces)}
+          </div>
+          <div className="text-center py-2">
+            <p className="text-xs text-gray-400">Best Move</p>
+            <p className="font-mono text-lg">{prediction?.bestMove}</p>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm">White taken:</span>
+            {renderTakenPieces(whiteTakenPieces)}
+          </div>
+          <div className="flex justify-around items-center pt-2">
+            <button
+              onClick={saveBoardToLocalStorage}
+              className="flex flex-col items-center text-gray-300"
+            >
+              <FontAwesomeIcon icon={faSave} className="text-xl" />
+              <span className="text-xs">Save</span>
+            </button>
+            <button
+              onClick={() => setShowSavedGamesModal(true)}
+              className="flex flex-col items-center text-gray-300"
+            >
+              <FontAwesomeIcon icon={faListAlt} className="text-xl" />
+              <span className="text-xs">Load</span>
+            </button>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="flex flex-col items-center text-gray-300"
+            >
+              <FontAwesomeIcon icon={faCog} className="text-xl" />
+              <span className="text-xs">Settings</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* --- DESKTOP LAYOUT --- */}
+      <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-20 p-4 bg-gray-900">
+        <div className="h-full mt-10 w-auto flex flex-col justify-between max-w-[144px] text-white">
+          <div className="flex flex-col items-center">
+            {renderTakenPieces(blackTakenPieces)}
+          </div>
+          <div className="flex flex-col items-center">
+            {renderTakenPieces(whiteTakenPieces)}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 w-[600px]">
+          <p className="text-white text-2xl">
             {Math.floor(board.totalTurns)} {team}
           </p>
           <Board
             playMove={playMove}
             pieces={board.pieces}
+            board={board}
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="h-full mt-10 lg:w-[20%] w-[20%] flex flex-col justify-between pt-8 pb-5 max-w-[144px]">
-          <div className=" flex">
-            {renderTakenPiecesColumns(whiteTakenPieces)}
-          </div>
-          <div className=" flex">
-            {renderTakenPiecesColumns(blackTakenPieces)}
-          </div>
-        </div>
-        <div className=" flex flex-col justify-center gap-4 items-center">
-          <button
-            onClick={saveBoardToLocalStorage}
-            className="bg-[#9f4f32] hover:bg-[#9f4f32ae] -mb-2 text-[#ffdfba] font-bold text-lg py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Save Board
-          </button>
-          <h2 className=" text-[#ffdfba] text-base">Saved Boards:</h2>
-          <ul>
-            {savedBoards.map((savedBoard, index) => (
-              <li className=" text-white" key={index}>
-                {/* Add onClick event to handle board selection */}
-                <div className=" flex items-center justify-center gap-2">
-                  <div
-                    className=" flex items-center justify-center gap-2 cursor-pointer"
-                    onClick={() => handleSavedBoardClick(savedBoard.fen)}
-                  >
-                    {savedBoard.name}
+
+        <div className="flex flex-col justify-center gap-8 items-center text-[#ffdfba]">
+          <div className="flex flex-col justify-center gap-4 items-center">
+            <button
+              onClick={saveBoardToLocalStorage}
+              className="bg-[#9f4f32] hover:bg-[#9f4f32ae] -mb-2 text-[#ffdfba] font-bold text-lg py-2 px-4 rounded"
+            >
+              Save Board
+            </button>
+            <h2 className="text-base">Saved Boards:</h2>
+            <ul className="max-h-48 overflow-y-auto">
+              {savedBoards.map((s, i) => (
+                <li key={i} className="text-white">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => handleSavedBoardClick(s.fen)}
+                    >
+                      {s.name}
+                    </div>
+                    <button onClick={() => deleteBoard(i)}>
+                      <FontAwesomeIcon
+                        className="text-red-600"
+                        icon={faMinus}
+                      />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => deleteBoard(index)}
-                    className="  flex items-center justify-center w-3 h-3 focus:outline-none focus:shadow-outline"
-                  >
-                    <FontAwesomeIcon className=" text-red-600" icon={faMinus} />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className=" flex items-center flex-col text-[#ffdfba]">
-          <div className=" flex justify-center items-center gap-4">
-            <label htmlFor="botCheckbox">Activate Bot</label>
-            <input
-              type="checkbox"
-              onChange={handleBotCheckboxChange}
-              checked={botCheckbox}
-              id="botCheckbox"
-            />
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className=" text-xl ">
-            Select Level Bot:{" "}
-            <input
-              className=" bg-transparent w-6"
-              type="range"
-              min={1}
-              max={3}
-              value={level}
-              onChange={handleChangeLevel}
-            />
-            {level}
+          <div className="flex items-center flex-col">
+            <div className="flex items-center gap-4">
+              <label htmlFor="botCheckboxDesktop">Activate Bot</label>
+              <input
+                type="checkbox"
+                onChange={(e) => {
+                  setBotIsActivate(e.target.checked);
+                  setBotCheckbox(e.target.checked);
+                }}
+                checked={botCheckbox}
+                id="botCheckboxDesktop"
+              />
+            </div>
+            <div className="text-xl">
+              Level:{" "}
+              <input
+                className="w-24 align-middle"
+                type="range"
+                min={1}
+                max={3}
+                value={level}
+                onChange={(e) => setLevel(parseInt(e.target.value))}
+              />{" "}
+              {level}
+            </div>
+            <div>Eval: {prediction?.evaluation}</div>
+            <div>Best Move: {prediction?.bestMove}</div>
           </div>
-          <div>Evaluate Position : {prediction?.evaluation}</div>
-          <div>Best Next Move : {prediction?.bestMove}</div>
         </div>
       </div>
     </>

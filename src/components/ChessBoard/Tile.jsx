@@ -12,32 +12,43 @@ function Tile({
     ? ""
     : "hover:cursor-grab active:cursor-grabbing";
   const tileColorClass = number % 2 === 0 ? "bg-[#9f4f32]" : "bg-[#ffdfba]";
+
   const highlightClass = highlight
-    ? `before:bg-black/40 before:rounded-full before:w-4 before:h-4 before:inset-0 before:mx-auto before:my-auto relative ${
+    ? `relative before:rounded-full before:absolute before:inset-0 before:m-auto ${
         image
-          ? "before:border-4 before:border-stone-900 before:bg-transparent before:rounded-full before:lg:w-[75px] before:lg:h-[75px] before:sm:w-[56.25px] before:sm:h-[56.25px]  before:w-[37.5px] before:h-[37.5px] before:absolute before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/4 before:transform before:opacity-70"
-          : ""
+          ? "before:w-[90%] before:h-[90%] before:border-4 before:border-stone-900/50"
+          : "before:w-1/3 before:h-1/3 before:bg-black/40"
       }`
     : "";
 
   return (
     <div
-      className={`lg:w-[75px] lg:h-[75px] sm:w-[56.25px] sm:h-[56.25px] w-[37.5px] h-[37.5px] grid place-content-center ${tileColorClass} ${highlightClass}`}
+      className={`w-full h-full flex items-center justify-center relative ${tileColorClass} ${highlightClass}`}
     >
       {image && (
         <div
-          className={`chess-piece bg-no-repeat bg-center bg-cover lg:w-[70px] lg:h-[70px] sm:w-[54px] sm:h-[54px] w-[34px] h-[34px] z-10 ${grabClasses}`}
+          className={`chess-piece bg-no-repeat bg-center bg-cover w-[90%] h-[90%] z-10 ${grabClasses}`}
           style={{ backgroundImage: `url(${image})` }}
         ></div>
       )}
-      <div className="lg:w-[75px] lg:h-[75px] sm:w-[56.25px] sm:h-[56.25px] w-[37.5px] h-[37.5px] absolute">
+
+      {/* MODIFICATION ICI : Ajout de la classe "select-none" */}
+      <div className="absolute w-full h-full top-0 left-0 text-xs font-semibold select-none">
         {bottomLabel && (
-          <div className="absolute bottom-[0.5px] -mb-[0.5px] right-[0.5px] text-xs text-black">
+          <div
+            className={`absolute bottom-0.5 right-1 ${
+              number % 2 === 0 ? "text-[#ffdfba]" : "text-[#9f4f32]"
+            }`}
+          >
             {bottomLabel}
           </div>
         )}
         {leftLabel && (
-          <div className="absolute top-[0.5px] left-[0.5px] text-xs text-black">
+          <div
+            className={`absolute top-0.5 left-1 ${
+              number % 2 === 0 ? "text-[#ffdfba]" : "text-[#9f4f32]"
+            }`}
+          >
             {leftLabel}
           </div>
         )}

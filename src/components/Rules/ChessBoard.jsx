@@ -117,18 +117,20 @@ export class ChessBoard {
   }
 
   getValidMoves(piece, ChessBoardState) {
+    // **CORRECTION** : Remplacement de l'opérateur d'assignation (=)
+    // par la syntaxe correcte pour un 'case'.
     switch (piece.type) {
-      case (piece.type = "PAWN"):
+      case "PAWN":
         return getPossiblePawnMoves(piece, ChessBoardState);
-      case (piece.type = "KNIGHT"):
+      case "KNIGHT":
         return getPossibleKnightMoves(piece, ChessBoardState);
-      case (piece.type = "BISHOP"):
+      case "BISHOP":
         return getPossibleBishopMoves(piece, ChessBoardState);
-      case (piece.type = "ROOK"):
+      case "ROOK":
         return getPossibleRookMoves(piece, ChessBoardState);
-      case (piece.type = "QUEEN"):
+      case "QUEEN":
         return getPossibleQueenMoves(piece, ChessBoardState);
-      case (piece.type = "KING"):
+      case "KING":
         return getPossibleKingMoves(piece, ChessBoardState);
       default:
         return [];

@@ -1,176 +1,163 @@
 import React, { useEffect, useRef, useState } from "react";
 import Tile from "./Tile.jsx";
-import {
-  VERTICAL_AXIS,
-  HORIZONTAL_AXIS,
-  GRID_SIZE_SM,
-  GRID_SIZE_LG,
-  GRID_SIZE_XL,
-  BOARD_SIZE_SM,
-  BOARD_SIZE_LG,
-  BOARD_SIZE_XL,
-} from "../PieceModels/Constant.jsx";
+import { VERTICAL_AXIS, HORIZONTAL_AXIS } from "../PieceModels/Constant.jsx";
 import { Position } from "../PieceModels/Position.jsx";
 
-function Board({ playMove, pieces, promotionOpen }) {
-  const [grabbedPiece, setGrabbedPiece] = useState(null);
-  const [grabPosition, setGrabPosition] = useState(new Position(-1, -1));
+function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
+  const grabbedPieceRef = useRef(null);
+  const grabPositionRef = useRef(new Position(-1, -1));
+  const [activePiece, setActivePiece] = useState(null);
+  const [draggedPiecePosition, setDraggedPiecePosition] = useState(null);
   const chessBoardRef = useRef(null);
-  let board = [];
-  let GRID_SIZE = 0;
-  let BOARD_SIZE = 0;
-  const [screenSize, setScreenSize] = useState({
-    width: window.innerWidth,
-  });
+  const [gridSize, setGridSize] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
-      setScreenSize({
-        width: window.innerWidth,
-      });
+      if (chessBoardRef.current) {
+        setGridSize(chessBoardRef.current.offsetWidth / 8);
+      }
     };
-
+    handleResize(); // Initial calculation
     window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (screenSize.width < 640) {
-    GRID_SIZE = GRID_SIZE_SM;
-    BOARD_SIZE = BOARD_SIZE_SM;
-  } else if (screenSize.width > 640 && screenSize.width < 1024) {
-    GRID_SIZE = GRID_SIZE_LG;
-    BOARD_SIZE = BOARD_SIZE_LG;
-  } else {
-    GRID_SIZE = GRID_SIZE_XL;
-    BOARD_SIZE = BOARD_SIZE_XL;
+  function getEventCoordinates(e) {
+    const touch = e.touches?.[0] || e.changedTouches?.[0];
+    return touch
+      ? { clientX: touch.clientX, clientY: touch.clientY }
+      : { clientX: e.clientX, clientY: e.clientY };
   }
 
   function grabPieces(e) {
     const chessBoard = chessBoardRef.current;
-    const element = e.target;
     if (
-      element.classList.contains("chess-piece") &&
-      chessBoard &&
-      promotionOpen === false
-    ) {
-      const grabX = Math.floor((e.clientX - chessBoard.offsetLeft) / GRID_SIZE);
-      const grabY = Math.abs(
-        Math.ceil((e.clientY - chessBoard.offsetTop - BOARD_SIZE) / GRID_SIZE)
-      );
-      setGrabPosition(new Position(grabX, grabY));
+      !chessBoard ||
+      promotionOpen ||
+      !e.target.classList.contains("chess-piece")
+    )
+      return;
 
-      const x = e.clientX - GRID_SIZE / 2;
-      const y = e.clientY - GRID_SIZE / 2;
+    const { clientX, clientY } = getEventCoordinates(e);
+    const boardRect = chessBoard.getBoundingClientRect();
 
-      element.style.position = "absolute";
-      element.style.left = `${x}px`;
-      element.style.top = `${y}px`;
-      element.style.zIndex = "50";
+    const grabX = Math.floor((clientX - boardRect.left) / gridSize);
+    const grabY = 7 - Math.floor((clientY - boardRect.top) / gridSize);
 
-      setGrabbedPiece(element);
+    const currentGrabPosition = new Position(grabX, grabY);
+    const pieceToGrab = pieces.find((p) => p.samePosition(currentGrabPosition));
+
+    if (!pieceToGrab || pieceToGrab.team !== chessBoardState.currentTeam) {
+      return;
     }
+
+    // Mettre à jour les états pour la surbrillance et pour masquer la pièce d'origine
+    grabPositionRef.current = currentGrabPosition;
+    setActivePiece(pieceToGrab);
+    setDraggedPiecePosition(currentGrabPosition);
+
+    // Créer un clone "fantôme" de la pièce
+    const element = e.target;
+    const clone = element.cloneNode(true);
+    clone.style.position = "absolute";
+    clone.style.left = `${clientX - gridSize / 2}px`;
+    clone.style.top = `${clientY - gridSize / 2}px`;
+    clone.style.width = `${gridSize}px`;
+    clone.style.height = `${gridSize}px`;
+    clone.style.zIndex = "100"; // S'assurer qu'il est au-dessus de tout
+    clone.style.pointerEvents = "none"; // Pour ne pas interférer avec les événements de la souris
+
+    // Stocker le clone dans la ref et l'ajouter au corps du document
+    grabbedPieceRef.current = clone;
+    document.body.appendChild(clone);
   }
 
   function movePieces(e) {
-    const chessBoard = chessBoardRef.current;
+    // Utiliser la ref
+    if (!grabbedPieceRef.current) return;
 
-    if (grabbedPiece && chessBoard) {
-      const minX = chessBoard.offsetLeft - 20;
-      const minY = chessBoard.offsetTop - 10;
-      const maxX = chessBoard.offsetLeft + chessBoard.clientWidth - 60;
-      const maxY = chessBoard.offsetTop + chessBoard.clientHeight - 70;
-      const x = e.clientX - 40;
-      const y = e.clientY - 40;
-
-      grabbedPiece.style.position = "absolute";
-
-      if (x < minX) {
-        grabbedPiece.style.left = `${minX}px`;
-      } else if (x > maxX) {
-        grabbedPiece.style.left = `${maxX}px`;
-      } else {
-        grabbedPiece.style.left = `${x}px`;
-      }
-      if (y < minY) {
-        grabbedPiece.style.top = `${minY}px`;
-      } else if (y > maxY) {
-        grabbedPiece.style.top = `${maxY}px`;
-      } else {
-        grabbedPiece.style.top = `${y}px`;
-      }
-    }
+    e.preventDefault();
+    const { clientX, clientY } = getEventCoordinates(e);
+    // Utiliser la ref
+    grabbedPieceRef.current.style.left = `${clientX - gridSize / 2}px`;
+    grabbedPieceRef.current.style.top = `${clientY - gridSize / 2}px`;
   }
 
   function dropPieces(e) {
     const chessBoard = chessBoardRef.current;
-    if (grabbedPiece && chessBoard) {
-      const x = Math.floor((e.clientX - chessBoard.offsetLeft) / GRID_SIZE);
-      const y = Math.abs(
-        Math.ceil((e.clientY - chessBoard.offsetTop - BOARD_SIZE) / GRID_SIZE)
-      );
 
-      const currentPiece = pieces.find((p) => p.samePosition(grabPosition));
-      if (currentPiece) {
-        var success = playMove(currentPiece.clone(), new Position(x, y));
+    // Supprimer le clone du DOM
+    if (grabbedPieceRef.current) {
+      document.body.removeChild(grabbedPieceRef.current);
+      grabbedPieceRef.current = null;
+    }
 
-        if (!success) {
-          grabbedPiece.style.position = "relative";
-          grabbedPiece.style.removeProperty("top");
-          grabbedPiece.style.removeProperty("left");
-        }
-      }
-      setGrabbedPiece(null);
+    // Toujours réinitialiser les états
+    setActivePiece(null);
+    setDraggedPiecePosition(null);
+
+    if (!chessBoard) return;
+
+    const { clientX, clientY } = getEventCoordinates(e);
+    const boardRect = chessBoard.getBoundingClientRect();
+
+    const x = Math.floor((clientX - boardRect.left) / gridSize);
+    const y = 7 - Math.floor((clientY - boardRect.top) / gridSize);
+
+    const currentPiece = pieces.find((p) =>
+      p.samePosition(grabPositionRef.current)
+    );
+    if (currentPiece) {
+      playMove(currentPiece.clone(), new Position(x, y));
     }
   }
 
-  // Board
+  const boardTiles = [];
   for (let j = VERTICAL_AXIS.length - 1; j >= 0; j--) {
     for (let i = 0; i < HORIZONTAL_AXIS.length; i++) {
       const number = j + i + 2;
       const piece = pieces.find((p) => p.samePosition(new Position(i, j)));
-      let image = piece ? piece.image : undefined;
 
-      let currentPiece =
-        grabbedPiece != null
-          ? pieces.find((p) => p.samePosition(grabPosition))
-          : undefined;
-      let highlight = currentPiece?.possibleMoves
-        ? currentPiece.possibleMoves.some((p) =>
-            p.samePosition(new Position(i, j))
-          )
-        : false;
+      const highlight = activePiece?.possibleMoves?.some((p) =>
+        p.samePosition(new Position(i, j))
+      );
 
-      const isBottomRow = j === 0;
-      const isLeftColumn = i === 0;
+      // Vérifier si la pièce sur cette case est celle qui est en train d'être déplacée
+      const isBeingDragged =
+        draggedPiecePosition &&
+        draggedPiecePosition.samePosition(new Position(i, j));
 
-      board.push(
+      const isBottomLabel = j === 0;
+      const isLeftLabel = i === 0;
+
+      boardTiles.push(
         <Tile
           key={`${j},${i}`}
-          image={image}
+          // Si la pièce est déplacée, on ne passe pas d'image à la tuile
+          image={isBeingDragged ? undefined : piece?.image}
           number={number}
           highlight={highlight}
           promotionOpen={promotionOpen}
-          bottomLabel={isBottomRow ? HORIZONTAL_AXIS[i] : null}
-          leftLabel={isLeftColumn ? VERTICAL_AXIS[j] : null}
+          bottomLabel={isBottomLabel ? HORIZONTAL_AXIS[i] : null}
+          leftLabel={isLeftLabel ? VERTICAL_AXIS[j] : null}
         />
       );
     }
   }
 
   return (
-    <>
-      <div
-        onMouseMove={(e) => movePieces(e)}
-        onMouseDown={(e) => grabPieces(e)}
-        onMouseUp={(e) => dropPieces(e)}
-        className=" bg-blue-800 lg:w-[600px]  lg:h-[600px] sm:w-[450px] sm:h-[450px] w-[300px] h-[300px] grid grid-cols-8 grid-rows-8"
-        ref={chessBoardRef}
-      >
-        {board}
-      </div>
-    </>
+    <div
+      onMouseMove={movePieces}
+      onMouseDown={grabPieces}
+      onMouseUp={dropPieces}
+      onTouchStart={grabPieces}
+      onTouchMove={movePieces}
+      onTouchEnd={dropPieces}
+      className="w-full aspect-square grid grid-cols-8 grid-rows-8"
+      ref={chessBoardRef}
+    >
+      {boardTiles}
+    </div>
   );
 }
 
