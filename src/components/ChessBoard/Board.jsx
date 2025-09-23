@@ -110,8 +110,6 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
       return;
     }
 
-    // --- MODIFICATION N°3 : Mettre à jour les indicateurs de manière asynchrone ---
-    // On laisse le navigateur gérer le "drag" d'abord, PUIS on met à jour l'état.
     setTimeout(() => {
       setActivePiece(pieceToGrab);
     }, 0);
