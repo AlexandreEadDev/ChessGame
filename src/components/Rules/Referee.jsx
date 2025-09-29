@@ -38,10 +38,8 @@ export default function Referee() {
   const [turnDelay, setTurnDelay] = useState(1000);
   const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  // --- NOUVEAUX ÉTATS ---
   const [moveHistory, setMoveHistory] = useState([]);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Pour l'accordéon mobile
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
@@ -93,7 +91,7 @@ export default function Referee() {
     if (savedBoard) {
       setTakenPieces(savedBoard.takenPieces || []);
       setHalfMoveClock(savedBoard.halfMoveClock || 0);
-      setMoveHistory(savedBoard.moveHistory || []); // Charger l'historique
+      setMoveHistory(savedBoard.moveHistory || []);
       setBoard((prevBoard) => {
         const updatedBoard = prevBoard.clone();
         updatedBoard.totalTurns = savedBoard.totalTurns;
@@ -193,7 +191,7 @@ export default function Referee() {
       halfMoveClock,
       takenPieces: takenPieces,
       totalTurns: board.totalTurns,
-      moveHistory: moveHistory, // Sauvegarder l'historique
+      moveHistory: moveHistory,
     };
     const newBoards = [...savedBoards, newBoard];
 
@@ -257,7 +255,6 @@ export default function Referee() {
     }
   };
 
-  // --- NOUVELLE FONCTION : Génère la notation algébrique ---
   function generateMoveNotation(
     playedPiece,
     destination,
@@ -289,7 +286,7 @@ export default function Referee() {
 
     const promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
     if (playedPiece.isPawn && destination.y === promotionRow) {
-      notation += "=Q"; // Simplifié, assume promotion en Dame
+      notation += "=Q";
     }
 
     if (boardAfterMove.winningTeam) {
@@ -428,7 +425,7 @@ export default function Referee() {
       : "flex flex-col items-center h-20";
     return (
       <div className={containerClass}>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap justify-center gap-1">
           {pieces.map((p, i) => (
             <img
               key={i}
@@ -591,7 +588,6 @@ export default function Referee() {
 
       {/* --- MOBILE LAYOUT --- */}
       <div className="flex flex-col h-screen w-screen bg-gray-800 text-white lg:hidden">
-        {/* MODIFICATION: Evaluation en haut */}
         <div className="bg-black/30 p-2 text-center text-sm font-mono">
           Eval: {prediction?.evaluation} | Best: {prediction?.bestMove}
         </div>
@@ -603,7 +599,6 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        {/* MODIFICATION: Bloc du bas réorganisé */}
         <div className="flex-grow p-2 flex flex-row justify-around bg-gray-900">
           <div className="flex flex-col w-1/2 space-y-2 text-center">
             <span className="text-xs text-gray-400">Prises (N)</span>
@@ -640,16 +635,39 @@ export default function Referee() {
             )}
           </div>
         </div>
+        {/* --- CORRECTION : BOUTONS D'ACTION RÉ-AJOUTÉS CI-DESSOUS --- */}
+        <div className="flex-shrink-0 flex justify-around items-center p-2 bg-gray-900 border-t border-black/30">
+          <button
+            onClick={saveBoardToLocalStorage}
+            className="flex flex-col items-center text-gray-300"
+          >
+            <FontAwesomeIcon icon={faSave} className="text-xl" />
+            <span className="text-xs">Save</span>
+          </button>
+          <button
+            onClick={() => setShowSavedGamesModal(true)}
+            className="flex flex-col items-center text-gray-300"
+          >
+            <FontAwesomeIcon icon={faListAlt} className="text-xl" />
+            <span className="text-xs">Load</span>
+          </button>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="flex flex-col items-center text-gray-300"
+          >
+            <FontAwesomeIcon icon={faCog} className="text-xl" />
+            <span className="text-xs">Settings</span>
+          </button>
+        </div>
       </div>
 
       {/* --- DESKTOP LAYOUT --- */}
       <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-10 p-4 bg-gray-900">
-        {/* MODIFICATION: Bloc de gauche avec historique et pièces prises */}
         <div className="h-[800px] w-80 flex flex-col text-white bg-gray-800 rounded-lg p-4">
           <h2 className="text-center text-lg font-semibold mb-2 text-[#ffdfba]">
             Historique
           </h2>
-          <div className="bg-black/20 p-2 rounded-md flex-grow overflow-y-auto mb-4">
+          <div className="bg-black/20 p-2 rounded-md flex-grow max-h-[500px] overflow-y-auto mb-4">
             <ol className="text-sm font-mono space-y-1">
               {moveHistory.map((move, index) =>
                 index % 2 === 0 ? (
