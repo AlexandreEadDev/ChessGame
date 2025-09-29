@@ -256,14 +256,19 @@ export default function Referee() {
     )
       return false;
 
+    // --- MODIFICATION ICI ---
+    // On vérifie d'abord si la pièce est relâchée sur sa case d'origine.
+    const isSamePosition = playedPiece.position.samePosition(destination);
+
     const validMove = playedPiece.possibleMoves.some((m) =>
       m.samePosition(destination)
     );
 
-    // --- MODIFICATION ICI ---
-    // Si le coup n'est pas valide, on joue le son "illégal" et on arrête la fonction.
     if (!validMove) {
-      playSound("/sounds/illegal.mp3");
+      // On ne joue le son que si la case de destination n'est PAS la même que l'origine.
+      if (!isSamePosition) {
+        playSound("/sounds/illegal.mp3");
+      }
       return false;
     }
 
