@@ -25,6 +25,7 @@ export class ChessBoard {
   }
 
   calculateAllMoves() {
+    // ... (cette fonction reste inchangée)
     for (const piece of this.pieces) {
       piece.possibleMoves = this.getValidMoves(piece, this.pieces);
     }
@@ -59,6 +60,7 @@ export class ChessBoard {
   }
 
   checkCurrentTeamMoves() {
+    // ... (cette fonction reste inchangée)
     for (const piece of this.pieces.filter(
       (p) => p.team === this.currentTeam
     )) {
@@ -117,8 +119,7 @@ export class ChessBoard {
   }
 
   getValidMoves(piece, ChessBoardState) {
-    // **CORRECTION** : Remplacement de l'opérateur d'assignation (=)
-    // par la syntaxe correcte pour un 'case'.
+    // ... (cette fonction reste inchangée)
     switch (piece.type) {
       case "PAWN":
         return getPossiblePawnMoves(piece, ChessBoardState);
@@ -137,6 +138,7 @@ export class ChessBoard {
     }
   }
 
+  // --- MÉTHODE playMove ENTIÈREMENT MISE À JOUR ---
   playMove(
     enPassantMove,
     validMove,
@@ -151,77 +153,12 @@ export class ChessBoard {
       p.samePosition(destination)
     );
 
-    if (
-      (playedPiece.isPawn &&
-        playedPiece.team === "WHITE" &&
-        destination.y === 7) ||
-      (playedPiece.team === "BLACK" && destination.y === 0)
-    ) {
-      if (botIsActivate) {
-        // Remove the pawn and push the new queen piece
-        this.pieces = this.pieces.reduce((results, piece) => {
-          if (piece.samePiecePosition(playedPiece)) {
-            // Create a new queen piece in the same position
-            const queenPiece = new Piece(
-              piece.position.clone(), // Correctly pass position
-              "QUEEN",
-              piece.team,
-              true, // hasMoved
-              piece.possibleMoves // Keep possible moves
-            );
-            results.push(queenPiece);
-            console.log(
-              "there is a promotion. Pawn change into default option that is QUEEN"
-            );
-          } else if (!piece.samePosition(destination)) {
-            if (piece.isPawn) {
-              piece.enPassant = false;
-            }
-
-            results.push(piece);
-          }
-          return results;
-        }, []);
-      }
-    }
-
-    if (
+    // Détection du roque par le mouvement du roi de 2 cases
+    const isCastlingMove =
       playedPiece.isKing &&
-      destinationPiece?.isRook &&
-      destinationPiece.team === playedPiece.team
-    ) {
-      if (!validMove) {
-        this.pieces = this.pieces.map((p) => {
-          if (p.samePiecePosition(playedPiece)) {
-            p.position.x = destination.x;
-          } else if (!p.samePiecePosition(destinationPiece)) {
-            return p;
-          }
-          return p;
-        });
-        return true;
-      } else {
-        const direction =
-          destinationPiece.position.x - playedPiece.position.x > 0 ? 1 : -1;
-        const newKingXPosition = playedPiece.position.x + direction * 2;
-        this.pieces = this.pieces.map((p) => {
-          if (p.samePiecePosition(playedPiece)) {
-            p.position.x = newKingXPosition;
-          } else if (p.samePiecePosition(destinationPiece)) {
-            p.position.x = newKingXPosition - direction;
-          }
-          return p;
-        });
-      }
-    }
+      Math.abs(destination.x - playedPiece.position.x) === 2;
 
-    if (destinationPiece && destinationPiece.team !== playedPiece.team) {
-      setTakenPieces((prevTakenPieces) => [
-        ...prevTakenPieces,
-        destinationPiece,
-      ]);
-    }
-
+    // Mise à jour de l'horloge des 50 coups et des pièces prises
     if (
       (destinationPiece && destinationPiece.team !== playedPiece.team) ||
       playedPiece.isPawn
@@ -231,7 +168,33 @@ export class ChessBoard {
       setHalfMoveClock((prevHalfMoveClock) => prevHalfMoveClock + 1);
     }
 
-    if (enPassantMove) {
+    if (destinationPiece && destinationPiece.team !== playedPiece.team) {
+      setTakenPieces((prevTakenPieces) => [
+        ...prevTakenPieces,
+        destinationPiece,
+      ]);
+    }
+
+    if (isCastlingMove) {
+      const direction = destination.x - playedPiece.position.x > 0 ? 1 : -1;
+      const rookX = direction > 0 ? 7 : 0;
+
+      this.pieces = this.pieces.map((p) => {
+        if (p.samePiecePosition(playedPiece)) {
+          p.position.x = destination.x;
+          p.hasMoved = true;
+        } else if (
+          p.isRook &&
+          p.team === playedPiece.team &&
+          p.position.x === rookX &&
+          p.position.y === playedPiece.position.y
+        ) {
+          p.position.x = destination.x - direction;
+          p.hasMoved = true;
+        }
+        return p;
+      });
+    } else if (enPassantMove) {
       const enPassantPawn = this.pieces.find(
         (p) =>
           p.isPawn &&
@@ -248,52 +211,56 @@ export class ChessBoard {
 
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
-          if (piece.isPawn) piece.enPassant = false;
+          piece.enPassant = false;
           piece.position.x = destination.x;
           piece.position.y = destination.y;
           piece.hasMoved = true;
           results.push(piece);
-        } else if (
-          !piece.samePosition(
-            new Position(destination.x, destination.y - pawnDirection)
-          )
-        ) {
-          if (piece.isPawn) {
-            piece.enPassant = false;
-          }
+        } else if (!piece.samePosition(enPassantPawn.position)) {
+          if (piece.isPawn) piece.enPassant = false;
           results.push(piece);
         }
-
         return results;
       }, []);
-
-      this.calculateAllMoves();
     } else if (validMove) {
       this.pieces = this.pieces.reduce((results, piece) => {
         if (piece.samePiecePosition(playedPiece)) {
-          // SPECIAL MOVE
           if (piece.isPawn)
             piece.enPassant =
-              Math.abs(playedPiece.position.y - destination.y) === 2 &&
-              piece.type === "PAWN";
+              Math.abs(playedPiece.position.y - destination.y) === 2;
           piece.position.x = destination.x;
           piece.position.y = destination.y;
           piece.hasMoved = true;
           results.push(piece);
         } else if (!piece.samePosition(destination)) {
-          if (piece.isPawn) {
-            piece.enPassant = false;
-          }
+          if (piece.isPawn) piece.enPassant = false;
           results.push(piece);
         }
         return results;
       }, []);
-
-      this.calculateAllMoves();
     } else {
       return false;
     }
 
+    // Logique de promotion automatique pour le bot
+    const promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
+    if (playedPiece.isPawn && destination.y === promotionRow) {
+      if (botIsActivate && this.currentTeam === "BLACK") {
+        const promotedPawn = this.pieces.find(
+          (p) => p.samePosition(destination) && p.isPawn
+        );
+        if (promotedPawn) {
+          this.pieces = this.pieces.filter(
+            (p) => !p.samePiecePosition(promotedPawn)
+          );
+          this.pieces.push(
+            new Piece(destination.clone(), "QUEEN", playedPiece.team, true)
+          );
+        }
+      }
+    }
+
+    this.calculateAllMoves();
     return true;
   }
 

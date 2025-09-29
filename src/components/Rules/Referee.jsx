@@ -33,13 +33,21 @@ export default function Referee() {
   const [level, setLevel] = useState(1);
   const [botIsActivate, setBotIsActivate] = useState(false);
   const [botCheckbox, setBotCheckbox] = useState(false);
-  const [botTurn, setBotTurn] = useState(false);
-  const [predictedMove, setPredictedMove] = useState(null);
   const [turnDelay, setTurnDelay] = useState(1000);
   const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
+
+  const playSound = (soundFile) => {
+    try {
+      const audio = new Audio(soundFile);
+      audio.volume = 0.4;
+      audio.play();
+    } catch (e) {
+      console.error("Impossible de jouer le son.", e);
+    }
+  };
 
   useEffect(() => {
     const boardsFromLocalStorage = JSON.parse(
@@ -53,23 +61,18 @@ export default function Referee() {
     setBlackTakenPieces(blackPieces);
   }, [takenPieces]);
 
-  const handleBotTurn = async () => {
-    if (!botTurn || board.currentTeam !== "BLACK") return;
-
-    await playBotMove(prediction.moveToPlay);
-
-    setBotTurn(false);
-  };
-
-  useEffect(() => {
-    handleBotTurn();
-  }, [botTurn]);
-
   useEffect(() => {
     if (botIsActivate && board.currentTeam === "BLACK") {
-      setBotTurn(true);
+      const fen = boardToFEN(board);
+      evaluatePosition(fen);
     }
-  }, [board.currentTeam, botIsActivate]);
+  }, [botIsActivate, board.currentTeam, board]);
+
+  useEffect(() => {
+    if (checkMateOpen) {
+      playSound("/sounds/win.mp3");
+    }
+  }, [checkMateOpen]);
 
   const handleSavedBoardClick = (fen) => {
     const newBoard = fenToBoard(fen);
@@ -155,7 +158,7 @@ export default function Referee() {
         }
       }
     }
-    return flags; // **FIX**: Return the array directly, not a string
+    return flags;
   };
 
   const getEnPassantTarget = (board) => {
@@ -167,8 +170,6 @@ export default function Referee() {
     }
     return "-";
   };
-
-  // ... (le reste du fichier est identique)
 
   const fen = boardToFEN(board);
 
@@ -203,6 +204,29 @@ export default function Referee() {
     setSavedBoards(updatedBoards);
   };
 
+  const playBotMove = (move) => {
+    if (!move || board.currentTeam !== "BLACK" || !botIsActivate) return;
+
+    const initPos = new Position(
+      move.charCodeAt(0) - 97,
+      parseInt(move[1]) - 1
+    );
+    const nextPos = new Position(
+      move.charCodeAt(2) - 97,
+      parseInt(move[3]) - 1
+    );
+
+    const pieceToMove = board.pieces.find((p) =>
+      p.position.samePosition(initPos)
+    );
+
+    if (pieceToMove && !promotionOpen) {
+      setTimeout(() => {
+        playMove(pieceToMove, nextPos);
+      }, turnDelay);
+    }
+  };
+
   const evaluatePosition = async (fen) => {
     try {
       const response = await axios.post(
@@ -216,49 +240,14 @@ export default function Referee() {
         bestMove: data.best_move,
         moveToPlay: data.move_to_play,
       });
-      setPredictedMove(data.move_to_play);
+
+      if (board.currentTeam === "BLACK" && botIsActivate) {
+        playBotMove(data.move_to_play);
+      }
     } catch (error) {
       console.error("Error evaluating position:", error.message);
     }
   };
-
-  function isElementAtPosition(board, x, y) {
-    const piece = board.pieces.find(
-      (p) => p.position.x === x && p.position.y === y
-    );
-    return piece
-      ? { type: piece.type, team: piece.team }
-      : { type: "Empty", team: "None" };
-  }
-
-  const playBotMove = async () => {
-    if (!predictedMove || board.currentTeam !== "BLACK") return;
-
-    const initPos = new Position(
-      predictedMove.charCodeAt(0) - 97,
-      parseInt(predictedMove[1]) - 1
-    );
-    const nextPos = new Position(
-      predictedMove.charCodeAt(2) - 97,
-      parseInt(predictedMove[3]) - 1
-    );
-
-    const pieceToMove = board.pieces.find((p) =>
-      p.position.samePosition(initPos)
-    );
-
-    if (pieceToMove && botIsActivate && !promotionOpen) {
-      setTimeout(() => {
-        playMove(pieceToMove, nextPos);
-        setPredictedMove(null);
-        setBotTurn(false);
-      }, turnDelay);
-    }
-  };
-
-  useEffect(() => {
-    playBotMove();
-  }, [predictedMove]);
 
   function playMove(playedPiece, destination) {
     if (
@@ -270,14 +259,34 @@ export default function Referee() {
     const validMove = playedPiece.possibleMoves.some((m) =>
       m.samePosition(destination)
     );
-    if (!validMove) return false;
 
+    // --- MODIFICATION ICI ---
+    // Si le coup n'est pas valide, on joue le son "illégal" et on arrête la fonction.
+    if (!validMove) {
+      playSound("/sounds/illegal.mp3");
+      return false;
+    }
+
+    const isCastlingMove =
+      playedPiece.isKing &&
+      Math.abs(destination.x - playedPiece.position.x) === 2;
+    const isCapture = board.pieces.some(
+      (p) => p.samePosition(destination) && p.team !== playedPiece.team
+    );
     const enPassantMove = isEnPassantMove(
       playedPiece.position,
       destination,
       playedPiece.type,
       playedPiece.team
     );
+
+    if (isCastlingMove) {
+      playSound("/sounds/castle.mp3");
+    } else if (isCapture || enPassantMove) {
+      playSound("/sounds/capture.mp3");
+    } else {
+      playSound("/sounds/move.mp3");
+    }
 
     let playedMoveIsValid = false;
     setBoard((prevBoard) => {
@@ -295,7 +304,10 @@ export default function Referee() {
 
       if (clonedBoard.winningTeam) setCheckMateOpen(true);
 
-      evaluatePosition(boardToFEN(clonedBoard));
+      if (playedMoveIsValid) {
+        const newFen = boardToFEN(clonedBoard);
+        evaluatePosition(newFen);
+      }
       return clonedBoard;
     });
 
@@ -555,7 +567,7 @@ export default function Referee() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4 w-[600px]">
+        <div className="flex flex-col items-center gap-4 w-[800px]">
           <p className="text-white text-2xl">
             {Math.floor(board.totalTurns)} {team}
           </p>

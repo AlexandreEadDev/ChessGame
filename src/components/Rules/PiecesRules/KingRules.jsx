@@ -6,6 +6,7 @@ import {
 } from "../GeneralRules";
 
 export const kingMove = (prevPosition, nextPosition, team, boardState) => {
+  // ... (cette fonction reste inchangée)
   const directions = [
     [1, 0],
     [-1, 0],
@@ -45,6 +46,7 @@ export const kingMove = (prevPosition, nextPosition, team, boardState) => {
 };
 
 export const getPossibleKingMoves = (king, boardstate) => {
+  // ... (cette fonction reste inchangée)
   const directions = [
     [0, 1],
     [0, -1],
@@ -127,7 +129,14 @@ export const getCastlingMoves = (king, boardstate) => {
 
     if (!valid) continue;
 
-    possibleMoves.push(rook.position.clone());
+    // --- MODIFICATION ICI ---
+    // On retourne la case de destination du roi (2 cases de déplacement)
+    // au lieu de la case de la tour.
+    const newKingPosition = new Position(
+      king.position.x + direction * 2,
+      king.position.y
+    );
+    possibleMoves.push(newKingPosition);
   }
 
   return possibleMoves;
