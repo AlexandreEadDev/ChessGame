@@ -6,6 +6,8 @@ import {
   faSave,
   faCog,
   faListAlt,
+  faChevronDown,
+  faChevronUp,
 } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
@@ -36,6 +38,10 @@ export default function Referee() {
   const [turnDelay, setTurnDelay] = useState(1000);
   const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // --- NOUVEAUX ÉTATS ---
+  const [moveHistory, setMoveHistory] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Pour l'accordéon mobile
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
@@ -85,8 +91,9 @@ export default function Referee() {
       (board) => board.fen === fen
     );
     if (savedBoard) {
-      setTakenPieces(savedBoard.takenPieces);
-      setHalfMoveClock(savedBoard.halfMoveClock);
+      setTakenPieces(savedBoard.takenPieces || []);
+      setHalfMoveClock(savedBoard.halfMoveClock || 0);
+      setMoveHistory(savedBoard.moveHistory || []); // Charger l'historique
       setBoard((prevBoard) => {
         const updatedBoard = prevBoard.clone();
         updatedBoard.totalTurns = savedBoard.totalTurns;
@@ -186,6 +193,7 @@ export default function Referee() {
       halfMoveClock,
       takenPieces: takenPieces,
       totalTurns: board.totalTurns,
+      moveHistory: moveHistory, // Sauvegarder l'historique
     };
     const newBoards = [...savedBoards, newBoard];
 
@@ -249,6 +257,61 @@ export default function Referee() {
     }
   };
 
+  // --- NOUVELLE FONCTION : Génère la notation algébrique ---
+  function generateMoveNotation(
+    playedPiece,
+    destination,
+    isCapture,
+    isCastlingMove,
+    enPassantMove,
+    boardAfterMove
+  ) {
+    if (isCastlingMove) {
+      return destination.x > playedPiece.position.x ? "O-O" : "O-O-O";
+    }
+
+    const files = "abcdefgh";
+    const ranks = "12345678";
+    let notation = "";
+
+    if (playedPiece.type !== "PAWN") {
+      notation += playedPiece.isKnight ? "N" : playedPiece.type.charAt(0);
+    }
+
+    if (isCapture || enPassantMove) {
+      if (playedPiece.isPawn) {
+        notation += files[playedPiece.position.x];
+      }
+      notation += "x";
+    }
+
+    notation += files[destination.x] + ranks[destination.y];
+
+    const promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
+    if (playedPiece.isPawn && destination.y === promotionRow) {
+      notation += "=Q"; // Simplifié, assume promotion en Dame
+    }
+
+    if (boardAfterMove.winningTeam) {
+      notation += "#";
+    } else {
+      const opponentKing = boardAfterMove.pieces.find(
+        (p) => p.isKing && p.team !== boardAfterMove.currentTeam
+      );
+      if (opponentKing) {
+        const isCheck = boardAfterMove.pieces
+          .filter((p) => p.team === boardAfterMove.currentTeam)
+          .some((p) =>
+            p.possibleMoves?.some((m) => m.samePosition(opponentKing.position))
+          );
+        if (isCheck) {
+          notation += "+";
+        }
+      }
+    }
+    return notation;
+  }
+
   function playMove(playedPiece, destination) {
     if (
       playedPiece.possibleMoves === undefined ||
@@ -256,16 +319,12 @@ export default function Referee() {
     )
       return false;
 
-    // --- MODIFICATION ICI ---
-    // On vérifie d'abord si la pièce est relâchée sur sa case d'origine.
     const isSamePosition = playedPiece.position.samePosition(destination);
-
     const validMove = playedPiece.possibleMoves.some((m) =>
       m.samePosition(destination)
     );
 
     if (!validMove) {
-      // On ne joue le son que si la case de destination n'est PAS la même que l'origine.
       if (!isSamePosition) {
         playSound("/sounds/illegal.mp3");
       }
@@ -307,12 +366,22 @@ export default function Referee() {
         botIsActivate
       );
 
-      if (clonedBoard.winningTeam) setCheckMateOpen(true);
-
       if (playedMoveIsValid) {
+        const moveNotation = generateMoveNotation(
+          playedPiece,
+          destination,
+          isCapture,
+          isCastlingMove,
+          enPassantMove,
+          clonedBoard
+        );
+        setMoveHistory((prev) => [...prev, moveNotation]);
+
         const newFen = boardToFEN(clonedBoard);
         evaluatePosition(newFen);
       }
+
+      if (clonedBoard.winningTeam) setCheckMateOpen(true);
       return clonedBoard;
     });
 
@@ -353,12 +422,22 @@ export default function Referee() {
     setPromotionOpen(false);
   }
 
-  function renderTakenPieces(pieces) {
+  function renderTakenPieces(pieces, isMobile = false) {
+    const containerClass = isMobile
+      ? "flex-grow flex flex-col items-center justify-center"
+      : "flex flex-col items-center h-20";
     return (
-      <div className="flex flex-wrap gap-1">
-        {pieces.map((p, i) => (
-          <img key={i} className="w-6 h-6" src={p.image} alt={p.type} />
-        ))}
+      <div className={containerClass}>
+        <div className="flex flex-wrap gap-1">
+          {pieces.map((p, i) => (
+            <img
+              key={i}
+              className="w-5 h-5 sm:w-8 sm:h-8"
+              src={p.image}
+              alt={p.type}
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -370,6 +449,7 @@ export default function Referee() {
     setPrediction({ evaluation: 0, bestMove: "e2e4", moveToPlay: "e2e4" });
     setBotIsActivate(false);
     setBotCheckbox(false);
+    setMoveHistory([]);
   }
 
   return (
@@ -511,8 +591,9 @@ export default function Referee() {
 
       {/* --- MOBILE LAYOUT --- */}
       <div className="flex flex-col h-screen w-screen bg-gray-800 text-white lg:hidden">
+        {/* MODIFICATION: Evaluation en haut */}
         <div className="bg-black/30 p-2 text-center text-sm font-mono">
-          Evaluation: {prediction?.evaluation}
+          Eval: {prediction?.evaluation} | Best: {prediction?.bestMove}
         </div>
         <div className="w-full">
           <Board
@@ -522,52 +603,73 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="flex-grow p-2 flex flex-col justify-around bg-gray-900">
-          <div className="flex justify-between items-center">
-            <span className="text-sm">Black taken:</span>
-            {renderTakenPieces(blackTakenPieces)}
+        {/* MODIFICATION: Bloc du bas réorganisé */}
+        <div className="flex-grow p-2 flex flex-row justify-around bg-gray-900">
+          <div className="flex flex-col w-1/2 space-y-2 text-center">
+            <span className="text-xs text-gray-400">Prises (N)</span>
+            {renderTakenPieces(blackTakenPieces, true)}
+            <span className="text-xs text-gray-400">Prises (B)</span>
+            {renderTakenPieces(whiteTakenPieces, true)}
           </div>
-          <div className="text-center py-2">
-            <p className="text-xs text-gray-400">Best Move</p>
-            <p className="font-mono text-lg">{prediction?.bestMove}</p>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm">White taken:</span>
-            {renderTakenPieces(whiteTakenPieces)}
-          </div>
-          <div className="flex justify-around items-center pt-2">
+          <div className="w-1/2 flex flex-col">
             <button
-              onClick={saveBoardToLocalStorage}
-              className="flex flex-col items-center text-gray-300"
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              className="text-center p-2 bg-black/20 rounded-t-md flex justify-between items-center"
             >
-              <FontAwesomeIcon icon={faSave} className="text-xl" />
-              <span className="text-xs">Save</span>
+              <span className="text-sm">Historique</span>
+              <FontAwesomeIcon
+                icon={isHistoryOpen ? faChevronUp : faChevronDown}
+              />
             </button>
-            <button
-              onClick={() => setShowSavedGamesModal(true)}
-              className="flex flex-col items-center text-gray-300"
-            >
-              <FontAwesomeIcon icon={faListAlt} className="text-xl" />
-              <span className="text-xs">Load</span>
-            </button>
-            <button
-              onClick={() => setShowSettingsModal(true)}
-              className="flex flex-col items-center text-gray-300"
-            >
-              <FontAwesomeIcon icon={faCog} className="text-xl" />
-              <span className="text-xs">Settings</span>
-            </button>
+            {isHistoryOpen && (
+              <div className="bg-black/20 p-2 rounded-b-md flex-grow overflow-y-auto h-32">
+                <ol className="list-decimal list-inside text-sm font-mono">
+                  {moveHistory.map((move, index) =>
+                    index % 2 === 0 ? (
+                      <li key={index} value={index / 2 + 1} className="flex">
+                        <span className="w-10 text-right pr-2">
+                          {index / 2 + 1}.
+                        </span>
+                        <span className="w-12">{move}</span>
+                        <span className="w-12">{moveHistory[index + 1]}</span>
+                      </li>
+                    ) : null
+                  )}
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* --- DESKTOP LAYOUT --- */}
-      <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-20 p-4 bg-gray-900">
-        <div className="h-full mt-10 w-auto flex flex-col justify-between max-w-[144px] text-white">
-          <div className="flex flex-col items-center">
-            {renderTakenPieces(blackTakenPieces)}
+      <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-10 p-4 bg-gray-900">
+        {/* MODIFICATION: Bloc de gauche avec historique et pièces prises */}
+        <div className="h-[800px] w-80 flex flex-col text-white bg-gray-800 rounded-lg p-4">
+          <h2 className="text-center text-lg font-semibold mb-2 text-[#ffdfba]">
+            Historique
+          </h2>
+          <div className="bg-black/20 p-2 rounded-md flex-grow overflow-y-auto mb-4">
+            <ol className="text-sm font-mono space-y-1">
+              {moveHistory.map((move, index) =>
+                index % 2 === 0 ? (
+                  <li key={index} className="grid grid-cols-3 gap-2">
+                    <span className="text-gray-400 text-right">
+                      {index / 2 + 1}.
+                    </span>
+                    <span>{move}</span>
+                    <span>{moveHistory[index + 1] || ""}</span>
+                  </li>
+                ) : null
+              )}
+            </ol>
           </div>
-          <div className="flex flex-col items-center">
+          <h2 className="text-center text-lg font-semibold mb-2 text-[#ffdfba]">
+            Pièces Prises
+          </h2>
+          <div className="bg-black/20 p-2 rounded-md">
+            {renderTakenPieces(blackTakenPieces)}
+            <hr className="border-gray-600 my-2" />
             {renderTakenPieces(whiteTakenPieces)}
           </div>
         </div>
@@ -584,7 +686,7 @@ export default function Referee() {
           />
         </div>
 
-        <div className="flex flex-col justify-center gap-8 items-center text-[#ffdfba]">
+        <div className="flex flex-col justify-center gap-8 items-center text-[#ffdfba] w-56">
           <div className="flex flex-col justify-center gap-4 items-center">
             <button
               onClick={saveBoardToLocalStorage}
