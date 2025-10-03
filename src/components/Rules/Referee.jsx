@@ -587,7 +587,7 @@ export default function Referee() {
       )}
 
       {/* --- MOBILE LAYOUT --- */}
-      <div className="flex flex-col h-screen w-screen bg-gray-800 text-white lg:hidden">
+      <div className="flex flex-col h-screen w-screen  text-white lg:hidden">
         <div className="bg-black/30 p-2 text-center text-sm font-mono">
           Eval: {prediction?.evaluation} | Best: {prediction?.bestMove}
         </div>
@@ -599,7 +599,7 @@ export default function Referee() {
             promotionOpen={promotionOpen}
           />
         </div>
-        <div className="flex-grow p-2 flex flex-row justify-around bg-gray-900">
+        <div className="flex-grow p-2 flex flex-row justify-around ">
           <div className="flex flex-col w-1/2 space-y-2 text-center">
             <span className="text-xs text-gray-400">Prises (N)</span>
             {renderTakenPieces(blackTakenPieces, true)}
@@ -635,8 +635,8 @@ export default function Referee() {
             )}
           </div>
         </div>
-        {/* --- CORRECTION : BOUTONS D'ACTION RÉ-AJOUTÉS CI-DESSOUS --- */}
-        <div className="flex-shrink-0 flex justify-around items-center p-2 bg-gray-900 border-t border-black/30">
+
+        <div className="flex-shrink-0 flex justify-around items-center p-2  border-t border-black/30">
           <button
             onClick={saveBoardToLocalStorage}
             className="flex flex-col items-center text-gray-300"
@@ -662,8 +662,8 @@ export default function Referee() {
       </div>
 
       {/* --- DESKTOP LAYOUT --- */}
-      <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-10 p-4 bg-gray-900">
-        <div className="h-[800px] w-80 flex flex-col text-white bg-gray-800 rounded-lg p-4">
+      <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-10 p-4 ">
+        <div className="h-[800px] w-80 flex flex-col text-white bg-[#272727] rounded-lg p-4">
           <h2 className="text-center text-lg font-semibold mb-2 text-[#ffdfba]">
             Historique
           </h2>
