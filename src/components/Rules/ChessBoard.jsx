@@ -14,6 +14,7 @@ export class ChessBoard {
   pieces;
   totalTurns;
   winningTeam;
+  takenPieces = [];
 
   constructor(pieces, totalTurns) {
     this.pieces = pieces;

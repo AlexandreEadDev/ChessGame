@@ -8,6 +8,9 @@ import {
   faListAlt,
   faChevronDown,
   faChevronUp,
+  faFlag,
+  faUndo,
+  faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import { initialBoard } from "../PieceModels/Constant.jsx";
 import { Piece } from "../PieceModels/Piece.jsx";
@@ -36,10 +39,14 @@ export default function Referee() {
   const [botIsActivate, setBotIsActivate] = useState(false);
   const [botCheckbox, setBotCheckbox] = useState(false);
   const [turnDelay, setTurnDelay] = useState(1000);
-  const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [moveHistory, setMoveHistory] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [optionsView, setOptionsView] = useState("main");
+
+  const [showRecapModal, setShowRecapModal] = useState(false);
+  const [recapBoard, setRecapBoard] = useState(null);
+  const [ghostMoveDetails, setGhostMoveDetails] = useState(null);
 
   const team = Number.isInteger(board.totalTurns) ? "White" : "Black";
 
@@ -68,15 +75,88 @@ export default function Referee() {
   useEffect(() => {
     if (botIsActivate && board.currentTeam === "BLACK") {
       const fen = boardToFEN(board);
-      evaluatePosition(fen);
+      evaluatePositionAndPlayBotMove(fen);
     }
   }, [botIsActivate, board.currentTeam, board]);
+
+  useEffect(() => {
+    const lastMove = moveHistory[moveHistory.length - 1];
+    if (lastMove && lastMove.bestMove === null) {
+      fetchAndRecordBestMove(lastMove.fenBeforeMove);
+    }
+  }, [moveHistory]);
 
   useEffect(() => {
     if (checkMateOpen) {
       playSound("/sounds/win.mp3");
     }
   }, [checkMateOpen]);
+
+  function forfeitGame() {
+    const winner = board.currentTeam === "WHITE" ? "BLACK" : "WHITE";
+    setBoard((prev) => {
+      const newBoard = prev.clone();
+      newBoard.winningTeam = winner;
+      return newBoard;
+    });
+    setCheckMateOpen(true);
+  }
+
+  function undoMove() {
+    if (moveHistory.length === 0) return;
+
+    const movesToUndo =
+      botIsActivate && moveHistory.length > 1 && board.currentTeam === "WHITE"
+        ? 2
+        : 1;
+
+    const newHistory = moveHistory.slice(0, moveHistory.length - movesToUndo);
+    setMoveHistory(newHistory);
+
+    if (newHistory.length === 0) {
+      setBoard(initialBoard.clone());
+      setTakenPieces([]);
+    } else {
+      const lastMove = newHistory[newHistory.length - 1];
+      setBoard(fenToBoard(lastMove.fenAfterMove));
+      setTakenPieces(lastMove.takenPiecesBeforeMove || []);
+    }
+  }
+
+  function handleRecapMoveClick(historyEntry) {
+    const boardFromFen = fenToBoard(historyEntry.fenAfterMove);
+    setRecapBoard(boardFromFen);
+
+    if (
+      historyEntry.bestMove &&
+      historyEntry.playedMove !== historyEntry.bestMove
+    ) {
+      const bestMoveFromPos = new Position(
+        historyEntry.bestMove.charCodeAt(0) - 97,
+        parseInt(historyEntry.bestMove[1]) - 1
+      );
+      const bestMoveToPos = new Position(
+        historyEntry.bestMove.charCodeAt(2) - 97,
+        parseInt(historyEntry.bestMove[3]) - 1
+      );
+
+      const boardBeforeMove = fenToBoard(historyEntry.fenBeforeMove);
+      const pieceThatShouldHaveMoved = boardBeforeMove.pieces.find((p) =>
+        p.samePosition(bestMoveFromPos)
+      );
+
+      if (pieceThatShouldHaveMoved) {
+        setGhostMoveDetails({
+          image: pieceThatShouldHaveMoved.image,
+          position: bestMoveToPos,
+        });
+      } else {
+        setGhostMoveDetails(null);
+      }
+    } else {
+      setGhostMoveDetails(null);
+    }
+  }
 
   const handleSavedBoardClick = (fen) => {
     const newBoard = fenToBoard(fen);
@@ -99,8 +179,7 @@ export default function Referee() {
         return updatedBoard;
       });
     }
-    evaluatePosition(fen);
-    setShowSavedGamesModal(false);
+    setShowSettingsModal(false);
   };
 
   const boardToFEN = (board) => {
@@ -176,8 +255,6 @@ export default function Referee() {
     return "-";
   };
 
-  const fen = boardToFEN(board);
-
   const saveBoardToLocalStorage = () => {
     if (savedBoards.length >= 9) return;
     if (!boardName) {
@@ -187,7 +264,7 @@ export default function Referee() {
 
     const newBoard = {
       name: boardName,
-      fen,
+      fen: boardToFEN(board),
       halfMoveClock,
       takenPieces: takenPieces,
       totalTurns: board.totalTurns,
@@ -233,26 +310,42 @@ export default function Referee() {
     }
   };
 
-  const evaluatePosition = async (fen) => {
+  async function fetchPrediction(fen) {
     try {
       const response = await axios.post(
         "https://evaluatechesspositionfromfen.xyz/evaluate",
         { fen, level },
         { timeout: 5000 }
       );
-      const data = response.data;
-      setPrediction({
-        evaluation: data.evaluation,
-        bestMove: data.best_move,
-        moveToPlay: data.move_to_play,
-      });
-
-      if (board.currentTeam === "BLACK" && botIsActivate) {
-        playBotMove(data.move_to_play);
-      }
+      return response.data;
     } catch (error) {
       console.error("Error evaluating position:", error.message);
+      return { evaluation: 0, best_move: "error", move_to_play: "error" };
     }
+  }
+
+  const evaluatePositionAndPlayBotMove = async (fen) => {
+    const data = await fetchPrediction(fen);
+    setPrediction({
+      evaluation: data.evaluation,
+      bestMove: data.best_move,
+      moveToPlay: data.move_to_play,
+    });
+    playBotMove(data.move_to_play);
+  };
+
+  const fetchAndRecordBestMove = async (fenToAnalyze) => {
+    const predictionData = await fetchPrediction(fenToAnalyze);
+    const bestMove = predictionData.best_move;
+
+    setMoveHistory((currentHistory) =>
+      currentHistory.map((entry) => {
+        if (entry.fenBeforeMove === fenToAnalyze) {
+          return { ...entry, bestMove: bestMove };
+        }
+        return entry;
+      })
+    );
   };
 
   function generateMoveNotation(
@@ -310,23 +403,15 @@ export default function Referee() {
   }
 
   function playMove(playedPiece, destination) {
-    if (
-      playedPiece.possibleMoves === undefined ||
-      playedPiece.team !== board.currentTeam
-    )
-      return false;
-
-    const isSamePosition = playedPiece.position.samePosition(destination);
-    const validMove = playedPiece.possibleMoves.some((m) =>
-      m.samePosition(destination)
-    );
-
-    if (!validMove) {
-      if (!isSamePosition) {
+    if (!playedPiece.possibleMoves?.some((m) => m.samePosition(destination))) {
+      if (!playedPiece.position.samePosition(destination)) {
         playSound("/sounds/illegal.mp3");
       }
       return false;
     }
+
+    const takenPiecesBeforeMove = [...takenPieces];
+    const fenBeforeMove = boardToFEN(board);
 
     const isCastlingMove =
       playedPiece.isKing &&
@@ -355,7 +440,7 @@ export default function Referee() {
       clonedBoard.totalTurns += 0.5;
       playedMoveIsValid = clonedBoard.playMove(
         enPassantMove,
-        validMove,
+        true,
         playedPiece,
         destination,
         setTakenPieces,
@@ -372,10 +457,19 @@ export default function Referee() {
           enPassantMove,
           clonedBoard
         );
-        setMoveHistory((prev) => [...prev, moveNotation]);
 
-        const newFen = boardToFEN(clonedBoard);
-        evaluatePosition(newFen);
+        const newHistoryEntry = {
+          notation: moveNotation,
+          fenAfterMove: boardToFEN(clonedBoard),
+          fenBeforeMove: fenBeforeMove,
+          bestMove: null,
+          playedMove: `${String.fromCharCode(97 + playedPiece.position.x)}${
+            playedPiece.position.y + 1
+          }${String.fromCharCode(97 + destination.x)}${destination.y + 1}`,
+          takenPiecesBeforeMove: takenPiecesBeforeMove,
+        };
+
+        setMoveHistory((prev) => [...prev, newHistoryEntry]);
       }
 
       if (clonedBoard.winningTeam) setCheckMateOpen(true);
@@ -383,11 +477,13 @@ export default function Referee() {
     });
 
     const promotionRow = playedPiece.team === "WHITE" ? 7 : 0;
-    if (playedPiece.isPawn && destination.y === promotionRow) {
-      if (!botIsActivate) {
-        setPromotionOpen(true);
-        setPromotionPawn(playedPiece.cloneAt(destination));
-      }
+    if (
+      playedPiece.isPawn &&
+      destination.y === promotionRow &&
+      !botIsActivate
+    ) {
+      setPromotionOpen(true);
+      setPromotionPawn(playedPiece.cloneAt(destination));
     }
     return playedMoveIsValid;
   }
@@ -447,6 +543,9 @@ export default function Referee() {
     setBotIsActivate(false);
     setBotCheckbox(false);
     setMoveHistory([]);
+    setShowRecapModal(false);
+    setRecapBoard(null);
+    setGhostMoveDetails(null);
   }
 
   return (
@@ -497,96 +596,220 @@ export default function Referee() {
       {checkMateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg p-8">
-            <div className="flex items-center justify-center flex-col">
-              <span className="block mb-4">
+            <div className="flex items-center justify-center flex-col gap-4">
+              <span className="block">
                 The winning team is {board.winningTeam}!
               </span>
-              <button
-                onClick={restartGame}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Play again
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={restartGame}
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Play again
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRecapModal(true);
+                    setCheckMateOpen(false);
+                    if (moveHistory.length > 0) {
+                      handleRecapMoveClick(moveHistory[moveHistory.length - 1]);
+                    }
+                  }}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Game Recap
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-      {showSavedGamesModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center lg:hidden">
-          <div className="bg-gray-800 p-6 rounded-lg text-white w-11/12 max-w-sm">
-            <h2 className="text-[#ffdfba] text-lg mb-4">Saved Boards:</h2>
-            <ul className="max-h-64 overflow-y-auto">
-              {savedBoards.map((savedBoard, index) => (
-                <li className="text-white mb-2" key={index}>
-                  <div className="flex items-center justify-between">
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => handleSavedBoardClick(savedBoard.fen)}
-                    >
-                      {savedBoard.name}
-                    </div>
-                    <button
-                      onClick={() => deleteBoard(index)}
-                      className="w-5 h-5"
-                    >
-                      <FontAwesomeIcon
-                        className="text-red-600"
-                        icon={faMinus}
-                      />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => setShowSavedGamesModal(false)}
-              className="mt-4 bg-red-600 text-white py-2 px-4 rounded w-full"
-            >
-              Close
-            </button>
+      {showRecapModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-2">
+          <div className="bg-gray-800 p-4 rounded-lg text-white w-full max-w-md lg:max-w-4xl flex flex-col lg:flex-row gap-4 h-[90vh] lg:h-auto">
+            <div className="w-full lg:w-1/2 flex flex-col">
+              <h2 className="text-[#ffdfba] text-xl mb-4 text-center">
+                White's Moves Recap
+              </h2>
+              <div className="w-full mb-4 lg:hidden">
+                {recapBoard && (
+                  <Board
+                    pieces={recapBoard.pieces}
+                    board={recapBoard}
+                    isRecapActive={true}
+                    ghostMoveDetails={ghostMoveDetails}
+                  />
+                )}
+              </div>
+              <div className="flex-grow overflow-y-auto font-mono bg-black/20 p-2 rounded-md">
+                <ol className="list-decimal list-inside">
+                  {moveHistory
+                    .filter((_, index) => index % 2 === 0)
+                    .map((move, index) => {
+                      const turnNumber = index + 1;
+                      return (
+                        <li
+                          key={index}
+                          className="grid grid-cols-[auto_1fr] gap-x-4 items-center py-1"
+                        >
+                          <span className="text-gray-400">{turnNumber}.</span>
+                          <div
+                            onClick={() => handleRecapMoveClick(move)}
+                            className="cursor-pointer p-1 rounded hover:bg-white/10"
+                          >
+                            <span
+                              className={
+                                !move.bestMove ||
+                                move.playedMove === move.bestMove
+                                  ? "text-green-400"
+                                  : "text-red-400"
+                              }
+                            >
+                              Joué : {move.notation}
+                            </span>
+                            {move.bestMove === null ? (
+                              <span className="block text-gray-400 text-xs">
+                                Analyse en cours...
+                              </span>
+                            ) : (
+                              move.playedMove !== move.bestMove && (
+                                <span className="block text-yellow-500 text-xs">
+                                  Recommandé : {move.bestMove}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                </ol>
+              </div>
+              <button
+                onClick={restartGame}
+                className="mt-4 bg-red-600 text-white py-2 px-4 rounded w-full"
+              >
+                Close & Restart
+              </button>
+            </div>
+            <div className="w-full lg:w-1/2 hidden lg:block">
+              {recapBoard && (
+                <Board
+                  pieces={recapBoard.pieces}
+                  board={recapBoard}
+                  isRecapActive={true}
+                  ghostMoveDetails={ghostMoveDetails}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center lg:hidden">
-          <div className="bg-gray-800 p-6 rounded-lg text-white w-11/12 max-w-sm">
-            <div className="flex flex-col items-center gap-4 text-[#ffdfba]">
-              <div className="flex items-center gap-4">
-                <label htmlFor="botCheckbox">Activate Bot</label>
-                <input
-                  type="checkbox"
-                  onChange={(e) => {
-                    setBotIsActivate(e.target.checked);
-                    setBotCheckbox(e.target.checked);
-                  }}
-                  checked={botCheckbox}
-                  id="botCheckbox"
-                />
-              </div>
-              <div className="text-xl">
-                Level:{" "}
-                <input
-                  className="bg-transparent w-24 align-middle"
-                  type="range"
-                  min={1}
-                  max={3}
-                  value={level}
-                  onChange={(e) => setLevel(parseInt(e.target.value))}
-                />{" "}
-                {level}
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSettingsModal(false)}
-              className="mt-4 bg-red-600 text-white py-2 px-4 rounded w-full"
-            >
-              Close
-            </button>
+        <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center p-4 lg:hidden">
+          <div className="bg-gray-800 p-6 rounded-lg text-white w-full max-w-sm flex flex-col gap-4">
+            {optionsView === "main" && (
+              <>
+                <h2 className="text-center text-xl text-[#ffdfba]">Options</h2>
+                <div className="flex flex-col items-center gap-4 text-[#ffdfba]">
+                  <div className="flex items-center justify-between w-full">
+                    <label htmlFor="botCheckbox">Activer le Bot</label>
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        setBotIsActivate(e.target.checked);
+                        setBotCheckbox(e.target.checked);
+                      }}
+                      checked={botCheckbox}
+                      id="botCheckbox"
+                      className="w-5 h-5"
+                    />
+                  </div>
+                  <div className="text-lg w-full">
+                    <span>Niveau du Bot: </span>
+                    <input
+                      className="w-24 align-middle"
+                      type="range"
+                      min={1}
+                      max={3}
+                      value={level}
+                      onChange={(e) => setLevel(parseInt(e.target.value))}
+                    />
+                    <span className="ml-2 font-bold">{level}</span>
+                  </div>
+                </div>
+                <div className="border-t border-gray-600 my-2"></div>
+                <button
+                  onClick={saveBoardToLocalStorage}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
+                >
+                  Sauvegarder la partie
+                </button>
+                <button
+                  onClick={() => setOptionsView("load")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full"
+                >
+                  Charger une partie
+                </button>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="mt-4 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded w-full"
+                >
+                  Fermer
+                </button>
+              </>
+            )}
+            {optionsView === "load" && (
+              <>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setOptionsView("main")}
+                    className="text-gray-300 hover:text-white"
+                  >
+                    <FontAwesomeIcon icon={faArrowLeft} /> Retour
+                  </button>
+                  <h2 className="text-center text-xl text-[#ffdfba]">
+                    Charger
+                  </h2>
+                  <div className="w-16"></div>
+                </div>
+                <ul className="max-h-64 overflow-y-auto bg-black/20 p-2 rounded">
+                  {savedBoards.length > 0 ? (
+                    savedBoards.map((savedBoard, index) => (
+                      <li className="text-white mb-2" key={index}>
+                        <div className="flex items-center justify-between">
+                          <div
+                            className="cursor-pointer hover:text-[#ffdfba]"
+                            onClick={() =>
+                              handleSavedBoardClick(savedBoard.fen)
+                            }
+                          >
+                            {savedBoard.name}
+                          </div>
+                          <button
+                            onClick={() => deleteBoard(index)}
+                            className="w-5 h-5"
+                          >
+                            <FontAwesomeIcon
+                              className="text-red-600"
+                              icon={faMinus}
+                            />
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-gray-400 text-center">
+                      Aucune partie sauvegardée.
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* --- MOBILE LAYOUT --- */}
+      {/* --- Layouts MOBILE et DESKTOP --- */}
       <div className="flex flex-col h-screen w-screen  text-white lg:hidden">
         <div className="bg-black/30 p-2 text-center text-sm font-mono">
           Eval: {prediction?.evaluation} | Best: {prediction?.bestMove}
@@ -597,6 +820,7 @@ export default function Referee() {
             pieces={board.pieces}
             board={board}
             promotionOpen={promotionOpen}
+            isRecapActive={false}
           />
         </div>
         <div className="flex-grow p-2 flex flex-row justify-around ">
@@ -625,8 +849,10 @@ export default function Referee() {
                         <span className="w-10 text-right pr-2">
                           {index / 2 + 1}.
                         </span>
-                        <span className="w-12">{move}</span>
-                        <span className="w-12">{moveHistory[index + 1]}</span>
+                        <span className="w-12">{move.notation}</span>
+                        <span className="w-12">
+                          {moveHistory[index + 1]?.notation}
+                        </span>
                       </li>
                     ) : null
                   )}
@@ -635,33 +861,33 @@ export default function Referee() {
             )}
           </div>
         </div>
-
         <div className="flex-shrink-0 flex justify-around items-center p-2  border-t border-black/30">
           <button
-            onClick={saveBoardToLocalStorage}
+            onClick={undoMove}
             className="flex flex-col items-center text-gray-300"
           >
-            <FontAwesomeIcon icon={faSave} className="text-xl" />
-            <span className="text-xs">Save</span>
+            <FontAwesomeIcon icon={faUndo} className="text-xl" />
+            <span className="text-xs">Annuler</span>
           </button>
           <button
-            onClick={() => setShowSavedGamesModal(true)}
-            className="flex flex-col items-center text-gray-300"
+            onClick={forfeitGame}
+            className="flex flex-col items-center text-red-400"
           >
-            <FontAwesomeIcon icon={faListAlt} className="text-xl" />
-            <span className="text-xs">Load</span>
+            <FontAwesomeIcon icon={faFlag} className="text-xl" />
+            <span className="text-xs">Forfait</span>
           </button>
           <button
-            onClick={() => setShowSettingsModal(true)}
+            onClick={() => {
+              setOptionsView("main");
+              setShowSettingsModal(true);
+            }}
             className="flex flex-col items-center text-gray-300"
           >
             <FontAwesomeIcon icon={faCog} className="text-xl" />
-            <span className="text-xs">Settings</span>
+            <span className="text-xs">Options</span>
           </button>
         </div>
       </div>
-
-      {/* --- DESKTOP LAYOUT --- */}
       <div className="hidden lg:flex w-screen min-h-screen items-center justify-center gap-10 p-4 ">
         <div className="h-[800px] w-80 flex flex-col text-white bg-[#272727] rounded-lg p-4">
           <h2 className="text-center text-lg font-semibold mb-2 text-[#ffdfba]">
@@ -675,8 +901,8 @@ export default function Referee() {
                     <span className="text-gray-400 text-right">
                       {index / 2 + 1}.
                     </span>
-                    <span>{move}</span>
-                    <span>{moveHistory[index + 1] || ""}</span>
+                    <span>{move.notation}</span>
+                    <span>{moveHistory[index + 1]?.notation || ""}</span>
                   </li>
                 ) : null
               )}
@@ -691,7 +917,6 @@ export default function Referee() {
             {renderTakenPieces(whiteTakenPieces)}
           </div>
         </div>
-
         <div className="flex flex-col items-center gap-4 w-[800px]">
           <p className="text-white text-2xl">
             {Math.floor(board.totalTurns)} {team}
@@ -701,66 +926,82 @@ export default function Referee() {
             pieces={board.pieces}
             board={board}
             promotionOpen={promotionOpen}
+            isRecapActive={false}
           />
         </div>
-
-        <div className="flex flex-col justify-center gap-8 items-center text-[#ffdfba] w-56">
-          <div className="flex flex-col justify-center gap-4 items-center">
-            <button
-              onClick={saveBoardToLocalStorage}
-              className="bg-[#9f4f32] hover:bg-[#9f4f32ae] -mb-2 text-[#ffdfba] font-bold text-lg py-2 px-4 rounded"
-            >
-              Save Board
-            </button>
-            <h2 className="text-base">Saved Boards:</h2>
-            <ul className="max-h-48 overflow-y-auto">
-              {savedBoards.map((s, i) => (
-                <li key={i} className="text-white">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => handleSavedBoardClick(s.fen)}
-                    >
-                      {s.name}
+        <div className="flex flex-col justify-between h-[800px] text-[#ffdfba] w-56 py-4">
+          <div>
+            <div className="flex flex-col justify-center gap-4 items-center">
+              <button
+                onClick={saveBoardToLocalStorage}
+                className="bg-[#9f4f32] hover:bg-[#9f4f32ae] text-[#ffdfba] font-bold text-lg py-2 px-4 rounded w-full"
+              >
+                Save Board
+              </button>
+              <h2 className="text-base">Saved Boards:</h2>
+              <ul className="max-h-48 overflow-y-auto w-full">
+                {savedBoards.map((s, i) => (
+                  <li key={i} className="text-white">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => handleSavedBoardClick(s.fen)}
+                      >
+                        {s.name}
+                      </div>
+                      <button onClick={() => deleteBoard(i)}>
+                        <FontAwesomeIcon
+                          className="text-red-600"
+                          icon={faMinus}
+                        />
+                      </button>
                     </div>
-                    <button onClick={() => deleteBoard(i)}>
-                      <FontAwesomeIcon
-                        className="text-red-600"
-                        icon={faMinus}
-                      />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex items-center flex-col mt-4">
+              <div className="flex items-center gap-4">
+                <label htmlFor="botCheckboxDesktop">Activate Bot</label>
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    setBotIsActivate(e.target.checked);
+                    setBotCheckbox(e.target.checked);
+                  }}
+                  checked={botCheckbox}
+                  id="botCheckboxDesktop"
+                />
+              </div>
+              <div className="text-xl">
+                Level:{" "}
+                <input
+                  className="w-24 align-middle"
+                  type="range"
+                  min={1}
+                  max={3}
+                  value={level}
+                  onChange={(e) => setLevel(parseInt(e.target.value))}
+                />{" "}
+                {level}
+              </div>
+              <div>Eval: {prediction?.evaluation}</div>
+              <div>Best Move: {prediction?.bestMove}</div>
+            </div>
           </div>
-          <div className="flex items-center flex-col">
-            <div className="flex items-center gap-4">
-              <label htmlFor="botCheckboxDesktop">Activate Bot</label>
-              <input
-                type="checkbox"
-                onChange={(e) => {
-                  setBotIsActivate(e.target.checked);
-                  setBotCheckbox(e.target.checked);
-                }}
-                checked={botCheckbox}
-                id="botCheckboxDesktop"
-              />
-            </div>
-            <div className="text-xl">
-              Level:{" "}
-              <input
-                className="w-24 align-middle"
-                type="range"
-                min={1}
-                max={3}
-                value={level}
-                onChange={(e) => setLevel(parseInt(e.target.value))}
-              />{" "}
-              {level}
-            </div>
-            <div>Eval: {prediction?.evaluation}</div>
-            <div>Best Move: {prediction?.bestMove}</div>
+          <div className="flex flex-col gap-2 w-full">
+            <button
+              onClick={undoMove}
+              className="w-full bg-blue-600 hover:bg-blue-800 text-white font-bold text-sm py-2 px-2 rounded flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faUndo} /> Annuler
+            </button>
+            <button
+              onClick={forfeitGame}
+              className="w-full bg-red-600 hover:bg-red-800 text-white font-bold text-sm py-2 px-2 rounded flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faFlag} /> Forfait
+            </button>
           </div>
         </div>
       </div>

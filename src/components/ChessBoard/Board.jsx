@@ -1,17 +1,22 @@
-// Board.jsx - VERSION FINALE avec indicateurs
 import React, { useEffect, useRef, useState } from "react";
 import Tile from "./Tile.jsx";
 import { VERTICAL_AXIS, HORIZONTAL_AXIS } from "../PieceModels/Constant.jsx";
 import { Position } from "../PieceModels/Position.jsx";
 
-function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
+function Board({
+  playMove,
+  pieces,
+  promotionOpen,
+  board: chessBoardState,
+  isRecapActive,
+  ghostMoveDetails, // Nouvelle prop pour la pièce fantôme
+}) {
   const grabbedPieceRef = useRef(null);
   const originalPieceRef = useRef(null);
   const grabPositionRef = useRef(new Position(-1, -1));
   const chessBoardRef = useRef(null);
   const [gridSize, setGridSize] = useState(0);
 
-  // --- MODIFICATION N°1 : Réintroduction de l'état pour les indicateurs ---
   const [activePiece, setActivePiece] = useState(null);
 
   useEffect(() => {
@@ -58,8 +63,6 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
 
     grabbedPieceRef.current = null;
     originalPieceRef.current = null;
-
-    // --- MODIFICATION N°2 : Nettoyage des indicateurs après le coup ---
     setActivePiece(null);
 
     if (!chessBoard) return;
@@ -83,13 +86,13 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
       p.samePosition(grabPositionRef.current)
     );
 
-    if (playedPiece) {
+    if (playedPiece && playMove) {
       playMove(playedPiece, new Position(x, y));
     }
   };
 
   const grabPieces = (e) => {
-    if (grabbedPieceRef.current || promotionOpen) return;
+    if (isRecapActive || grabbedPieceRef.current || promotionOpen) return;
 
     const element = e.target;
     if (!element.classList.contains("chess-piece")) return;
@@ -143,7 +146,6 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
       const number = j + i + 2;
       const piece = pieces.find((p) => p.samePosition(new Position(i, j)));
 
-      // --- MODIFICATION N°4 : Réactivation du calcul pour la surbrillance ---
       const highlight = activePiece?.possibleMoves?.some((p) =>
         p.samePosition(new Position(i, j))
       );
@@ -156,7 +158,7 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
           image={piece?.image}
           number={number}
           promotionOpen={promotionOpen}
-          highlight={highlight} // On passe la variable `highlight` au composant Tile
+          highlight={highlight}
           bottomLabel={isBottomLabel ? HORIZONTAL_AXIS[i] : null}
           leftLabel={isLeftLabel ? VERTICAL_AXIS[j] : null}
         />
@@ -168,11 +170,31 @@ function Board({ playMove, pieces, promotionOpen, board: chessBoardState }) {
     <div
       onMouseDown={grabPieces}
       onTouchStart={grabPieces}
-      className="w-full aspect-square grid grid-cols-8 grid-rows-8 select-none"
+      className="w-full aspect-square grid grid-cols-8 grid-rows-8 select-none relative" // Ajout de "relative"
       ref={chessBoardRef}
       style={{ touchAction: "none" }}
     >
       {boardTiles}
+
+      {/* --- AFFICHAGE DE LA PIÈCE FANTÔME --- */}
+      {ghostMoveDetails && gridSize > 0 && (
+        <div
+          className="absolute bg-no-repeat bg-center bg-cover pointer-events-none"
+          style={{
+            width: `${gridSize * 0.9}px`,
+            height: `${gridSize * 0.9}px`,
+            top: `${
+              (7 - ghostMoveDetails.position.y) * gridSize + gridSize * 0.05
+            }px`,
+            left: `${
+              ghostMoveDetails.position.x * gridSize + gridSize * 0.05
+            }px`,
+            backgroundImage: `url(${ghostMoveDetails.image})`,
+            opacity: 0.5, // Rendre la pièce translucide
+            zIndex: 20, // S'assurer qu'elle est au-dessus des pièces normales
+          }}
+        ></div>
+      )}
     </div>
   );
 }
