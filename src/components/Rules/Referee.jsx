@@ -73,11 +73,26 @@ export default function Referee() {
   }, [takenPieces]);
 
   useEffect(() => {
-    if (botIsActivate && board.currentTeam === "BLACK") {
+    // Cette fonction sera appelée à chaque changement du plateau
+    const analyzeBoard = async () => {
       const fen = boardToFEN(board);
-      evaluatePositionAndPlayBotMove(fen);
-    }
-  }, [botIsActivate, board.currentTeam, board]);
+      const data = await fetchPrediction(fen);
+
+      // On met TOUJOURS à jour l'affichage de la prédiction
+      setPrediction({
+        evaluation: data.evaluation,
+        bestMove: data.best_move,
+        moveToPlay: data.move_to_play,
+      });
+
+      // MAIS, on ne fait jouer le bot QUE si les conditions sont réunies
+      if (botIsActivate && board.currentTeam === "BLACK") {
+        playBotMove(data.move_to_play);
+      }
+    };
+
+    analyzeBoard();
+  }, [board]);
 
   useEffect(() => {
     const lastMove = moveHistory[moveHistory.length - 1];
@@ -626,7 +641,7 @@ export default function Referee() {
       )}
       {showRecapModal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-2">
-          <div className="bg-gray-800 p-4 rounded-lg text-white w-full max-w-md lg:max-w-4xl flex flex-col lg:flex-row gap-4 h-[90vh] lg:h-auto">
+          <div className="bg-gray-800 p-4 rounded-lg text-white w-full max-w-md lg:max-w-4xl flex flex-col lg:flex-row gap-4 h-[95vh] lg:h-auto">
             <div className="w-full lg:w-1/2 flex flex-col">
               <h2 className="text-[#ffdfba] text-xl mb-4 text-center">
                 White's Moves Recap
@@ -641,7 +656,7 @@ export default function Referee() {
                   />
                 )}
               </div>
-              <div className="flex-grow overflow-y-auto font-mono bg-black/20 p-2 rounded-md">
+              <div className="flex-grow overflow-y-auto sm:max-h-[500px] max-h-[150px] font-mono bg-black/20 p-2 rounded-md">
                 <ol className="list-decimal list-inside">
                   {moveHistory
                     .filter((_, index) => index % 2 === 0)
@@ -691,7 +706,7 @@ export default function Referee() {
                 Close & Restart
               </button>
             </div>
-            <div className="w-full lg:w-1/2 hidden lg:block">
+            <div className="w-full lg:w-1/2 hidden lg:block my-auto">
               {recapBoard && (
                 <Board
                   pieces={recapBoard.pieces}
